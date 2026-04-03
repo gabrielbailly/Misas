@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Misas Logroño</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <section id="login-screen" class="card">
+      <h2>Misas Logroño - Iniciar sesión</h2>
+      <form id="login-form" autocomplete="off">
+        <label for="login-email">Correo</label>
+        <input id="login-email" type="email" required />
+        <label for="login-password">Contraseña</label>
+        <input id="login-password" type="password" required />
+        <button type="submit">Entrar</button>
+        <p id="login-error" class="error"></p>
+      </form>
+      <p>Usuarios de ejemplo:</p>
+      <ul>
+        <li>admin@misas.local (password: admin)</li>
+        <li>centro1@misas.local (password: centro1)</li>
+        <li>padre1@misas.local (password: padre1)</li>
+      </ul>
+    </section>
+
+    <section id="main-screen" class="hidden">
+      <header>
+        <div>
+          <h1>Misas Logroño</h1>
+          <p id="subtitle"></p>
+        </div>
+        <div>
+          <span id="current-user"></span>
+          <button id="logout-btn">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <nav class="topnav">
+        <button data-view="home" class="active">Inicio</button>
+        <button data-view="admin" id="admin-tab" class="hidden">Admin</button>
+        <button id="print-home">Imprimir misas mensual</button>
+      </nav>
+
+      <main>
+        <section id="home-view" class="view"></section>
+
+        <section id="admin-view" class="view hidden">
+          <div class="admin-tabs">
+            <button data-admin-view="centros" class="active">Centros</button>
+            <button data-admin-view="sacerdotes">Sacerdotes</button>
+            <button data-admin-view="misas">Misas mes</button>
+            <button data-admin-view="usuarios">Usuarios</button>
+          </div>
+
+          <div id="admin-content">
+            <section id="admin-centros" class="admin-section"></section>
+            <section id="admin-sacerdotes" class="admin-section hidden"></section>
+            <section id="admin-misas" class="admin-section hidden"></section>
+            <section id="admin-usuarios" class="admin-section hidden"></section>
+          </div>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <div id="print-container" class="print-container hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>

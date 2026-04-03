@@ -1,0 +1,40 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #f2f4f8; color: #1c2a35; }
+#app { max-width: 1280px; margin: 0 auto; padding: 16px; }
+.card { background: #fff; border: 1px solid #dbe2ea; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, .04); }
+.hidden { display: none !important; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+header h1 { margin: 0; font-size: 1.6rem; }
+header p { margin: 4px 0 0; color: #536372; }
+header div:last-child { display: flex; align-items: center; gap: 12px; }
+.topnav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.topnav button { border: 1px solid #c5d2db; background: #fff; color: #1d3a58; padding: 8px 12px; border-radius: 7px; cursor: pointer; }
+.topnav button.active { background: #1e84ff; color: #fff; border-color: #1e84ff; }
+main { background: #fff; border-radius: 10px; border: 1px solid #dbe2ea; padding: 16px; }
+.view { min-height: 80vh; }
+form { display: grid; gap: 10px; }
+input, select, button { font-size: 1rem; padding: 8px 10px; border: 1px solid #b3c3d2; border-radius: 6px; }
+button { cursor: pointer; background: #1e84ff; color: #fff; border: 1px solid #1e84ff; }
+button.secondary { background: #f8fafd; color: #0e3f6d; border: 1px solid #dbe2ea; }
+.error { color: #b00020; font-size: .9rem; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #dbe2ea; padding: 8px; text-align: left; }
+th { background: #f7fafc; }
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.admin-tabs button { background: #f4f7fb; border: 1px solid #dbe2ea; color: #1d3a58; }
+.admin-tabs button.active { background: #1e84ff; color: #fff; border-color: #1e84ff; }
+@media (max-width: 960px) {
+  header { flex-direction: column; align-items: flex-start; }
+  .topnav { justify-content: space-between; }
+  table, th, td { font-size: .85rem; }
+}
+@media (max-width: 640px) {
+  body { padding: 8px; }
+  .topnav { flex-wrap: wrap; }
+  table { font-size: .75rem; }
+}
+@media print {
+  body * { visibility: hidden; }
+  #print-container, #print-container * { visibility: visible; }
+  #print-container { position: absolute; top: 0; left: 0; width: 100%; }
+}
