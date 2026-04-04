@@ -46,25 +46,16 @@ const elements = {
 };
 
 function getData(key, fallback = []) {
-  // Primero intenta localStorage (más rápido)
-  const raw = localStorage.getItem(STORAGE[key]);
-  if (raw) {
-    try {
-      return JSON.parse(raw);
-    } catch (e) {
-      console.error('Error parsing localStorage:', e);
-    }
-  }
-  // Fallback al dataStore cacheado
+  // Retorna del cache en memoria (dataStore)
+  // Los datos se cargan desde Firebase en initData()
   return dataStore[key] || fallback;
 }
 
 function saveData(key, data) {
+  // Actualizar cache en memoria
   dataStore[key] = data;
-  // Siempre guardar en localStorage primero (fallback seguro)
-  localStorage.setItem(STORAGE[key], JSON.stringify(data));
   
-  // Guardar en Firebase de forma asíncrona (no bloquea)
+  // Guardar en Firebase de forma asíncrona
   if (window.db) {
     if (key === 'plan') {
       Object.keys(data).forEach(async (monthKey) => {
@@ -72,7 +63,8 @@ function saveData(key, data) {
           const docRef = doc(window.db, 'plan', monthKey);
           await setDoc(docRef, data[monthKey]);
         } catch (error) {
-          console.error('Error saving to Firebase:', error);
+          console.error('Error guardando plan en Firebase:', error);
+          alert('Error al guardar: ' + error.message);
         }
       });
     } else if (Array.isArray(data)) {
@@ -81,101 +73,52 @@ function saveData(key, data) {
           const docRef = doc(window.db, key, item.id.toString());
           await setDoc(docRef, item);
         } catch (error) {
-          console.error('Error saving to Firebase:', error);
+          console.error('Error guardando en Firebase:', error);
+          alert('Error al guardar: ' + error.message);
         }
       });
     }
+  } else {
+    console.warn('Firebase no está disponible. Los datos no se guardarán.');
   }
 }
 
 
 async function initData() {
-  const initialCentros = [
-    { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },
-    { id: 2, nombre: 'Centro Santa María', ubicacion: 'Plaza de la Paz 5', observaciones: 'Misa familiar', horaSemana: '20:00', horaFinSemana: '11:30' }
-  ];
-  const initialSacerdotes = [
-    { id: 1, nombre: 'Padre Pedro', telefono: '600123456' },
-    { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
-  ];
-  const initialUsuarios = [
-    { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin12', tipo: 'administrador', centroId: null },
-    { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
-    { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
-  ];
-  const initialPlan = {};
-
-  // Cargar desde localStorage primero (fallback seguro y rápido)
-  dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
-  dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
-  dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
-  dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
-
-  // Si Firebase está disponible, cargar y sincronizar de forma asíncrona
-  if (window.db) {
-    try {
-      // Crear/Cargar centros
-      const centrosSnap = await getDocs(collection(window.db, 'centros'));
-      if (centrosSnap.empty) {
-        // La colección está vacía, crear documentos iniciales
-        console.log('Creando colección centros en Firebase...');
-        for (const centro of initialCentros) {
-          await setDoc(doc(window.db, 'centros', centro.id.toString()), centro);
-        }
-        dataStore.centros = initialCentros;
-      } else {
-        dataStore.centros = centrosSnap.docs.map(d => d.data());
-      }
-
-      // Crear/Cargar sacerdotes
-      const sacerdotesSnap = await getDocs(collection(window.db, 'sacerdotes'));
-      if (sacerdotesSnap.empty) {
-        console.log('Creando colección sacerdotes en Firebase...');
-        for (const sacerdote of initialSacerdotes) {
-          await setDoc(doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
-        }
-        dataStore.sacerdotes = initialSacerdotes;
-      } else {
-        dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data());
-      }
-
-      // Crear/Cargar usuarios
-      const usuariosSnap = await getDocs(collection(window.db, 'usuarios'));
-      if (usuariosSnap.empty) {
-        console.log('Creando colección usuarios en Firebase...');
-        for (const usuario of initialUsuarios) {
-          await setDoc(doc(window.db, 'usuarios', usuario.id.toString()), usuario);
-        }
-        dataStore.usuarios = initialUsuarios;
-      } else {
-        dataStore.usuarios = usuariosSnap.docs.map(d => d.data());
-      }
-
-      // Crear/Cargar plan
-      const planSnap = await getDocs(collection(window.db, 'plan'));
-      if (planSnap.empty) {
-        console.log('Colección plan lista (vacía)');
-        dataStore.plan = {};
-      } else {
-        dataStore.plan = {};
-        planSnap.forEach(d => {
-          dataStore.plan[d.id] = d.data();
-        });
-      }
-
-      console.log('Datos sincronizados con Firebase:', dataStore);
-    } catch (error) {
-      console.error('Error syncing with Firebase:', error);
-      // Ya tenemos datos de localStorage, así que continuamos
-    }
+  if (!window.db) {
+    console.error('Firebase no está inicializado');
+    elements.loginLoading.textContent = 'Error: Firebase no disponible';
+    return;
   }
-}
 
+  try {
+    elements.loginLoading.textContent = 'Cargando datos desde Firebase...';
 
-function getDataFromLocal(key, fallback) {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
-  try { return JSON.parse(raw) || fallback; } catch { return fallback; }
+    // Cargar centros desde Firebase
+    const centrosSnap = await getDocs(collection(window.db, 'centros'));
+    dataStore.centros = centrosSnap.docs.map(d => d.data()) || [];
+
+    // Cargar sacerdotes desde Firebase
+    const sacerdotesSnap = await getDocs(collection(window.db, 'sacerdotes'));
+    dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data()) || [];
+
+    // Cargar usuarios desde Firebase
+    const usuariosSnap = await getDocs(collection(window.db, 'usuarios'));
+    dataStore.usuarios = usuariosSnap.docs.map(d => d.data()) || [];
+
+    // Cargar plan desde Firebase
+    const planSnap = await getDocs(collection(window.db, 'plan'));
+    dataStore.plan = {};
+    planSnap.forEach(d => {
+      dataStore.plan[d.id] = d.data();
+    });
+
+    console.log('✓ Datos cargados desde Firebase');
+  } catch (error) {
+    console.error('Error cargando datos:', error);
+    elements.loginLoading.textContent = 'Error: ' + error.message;
+    throw error;
+  }
 }
 
 function login(event) {
@@ -406,10 +349,16 @@ function renderCalendar(year, month, selectedDate) {
 }
 
 function changeHomeCalendarMonth(delta) {
-  const date = new Date(homeCalendarState.year, homeCalendarState.month + delta, 1);
-  homeCalendarState.year = date.getFullYear();
-  homeCalendarState.month = date.getMonth();
-  homeCalendarState.selectedDate = new Date(date.getFullYear(), date.getMonth(), 1);
+  const currentDay = homeCalendarState.selectedDate.getDate();
+  const newDate = new Date(homeCalendarState.year, homeCalendarState.month + delta, 1);
+  const newYear = newDate.getFullYear();
+  const newMonth = newDate.getMonth();
+  const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+  const targetDay = Math.min(currentDay, daysInNewMonth);
+  
+  homeCalendarState.year = newYear;
+  homeCalendarState.month = newMonth;
+  homeCalendarState.selectedDate = new Date(newYear, newMonth, targetDay);
   renderHome();
 }
 
