@@ -46,27 +46,45 @@ const elements = {
 };
 
 function getData(key, fallback = []) {
+  // Primero intenta localStorage (más rápido)
+  const raw = localStorage.getItem(STORAGE[key]);
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error('Error parsing localStorage:', e);
+    }
+  }
+  // Fallback al dataStore cacheado
   return dataStore[key] || fallback;
 }
 
 function saveData(key, data) {
   dataStore[key] = data;
+  // Siempre guardar en localStorage primero (fallback seguro)
+  localStorage.setItem(STORAGE[key], JSON.stringify(data));
+  
+  // Guardar en Firebase de forma asíncrona (no bloquea)
   if (window.db) {
     if (key === 'plan') {
-      // Para plan, guardar cada mes como documento
       Object.keys(data).forEach(async (monthKey) => {
-        const docRef = doc(window.db, 'plan', monthKey);
-        await setDoc(docRef, data[monthKey]).catch(console.error);
+        try {
+          const docRef = doc(window.db, 'plan', monthKey);
+          await setDoc(docRef, data[monthKey]);
+        } catch (error) {
+          console.error('Error saving to Firebase:', error);
+        }
       });
-    } else {
-      // Para arrays, guardar cada item como documento
+    } else if (Array.isArray(data)) {
       data.forEach(async (item) => {
-        const docRef = doc(window.db, key, item.id.toString());
-        await setDoc(docRef, item).catch(console.error);
+        try {
+          const docRef = doc(window.db, key, item.id.toString());
+          await setDoc(docRef, item);
+        } catch (error) {
+          console.error('Error saving to Firebase:', error);
+        }
       });
     }
-  } else {
-    localStorage.setItem(STORAGE[key], JSON.stringify(data));
   }
 }
 
@@ -87,56 +105,58 @@ async function initData() {
   ];
   const initialPlan = {};
 
+  // Cargar desde localStorage primero (fallback seguro y rápido)
+  dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
+  dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
+  dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
+  dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
+
+  // Si Firebase está disponible, cargar y sincronizar de forma asíncrona
   if (window.db) {
     try {
-      // Cargar centros
+      // Cargar centros desde Firebase
       const centrosSnap = await getDocs(collection(window.db, 'centros'));
-      if (centrosSnap.empty) {
-        for (const centro of initialCentros) {
+      if (!centrosSnap.empty) {
+        dataStore.centros = centrosSnap.docs.map(d => d.data());
+      } else if (dataStore.centros.length > 0) {
+        // Si no hay nada en Firebase, subir datos iniciales
+        for (const centro of dataStore.centros) {
           await setDoc(doc(window.db, 'centros', centro.id.toString()), centro);
         }
       }
-      dataStore.centros = centrosSnap.docs.map(doc => doc.data()) || initialCentros;
 
-      // Cargar sacerdotes
+      // Cargar sacerdotes desde Firebase
       const sacerdotesSnap = await getDocs(collection(window.db, 'sacerdotes'));
-      if (sacerdotesSnap.empty) {
-        for (const sacerdote of initialSacerdotes) {
+      if (!sacerdotesSnap.empty) {
+        dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data());
+      } else if (dataStore.sacerdotes.length > 0) {
+        for (const sacerdote of dataStore.sacerdotes) {
           await setDoc(doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
         }
       }
-      dataStore.sacerdotes = sacerdotesSnap.docs.map(doc => doc.data()) || initialSacerdotes;
 
-      // Cargar usuarios
+      // Cargar usuarios desde Firebase
       const usuariosSnap = await getDocs(collection(window.db, 'usuarios'));
-      if (usuariosSnap.empty) {
-        for (const usuario of initialUsuarios) {
+      if (!usuariosSnap.empty) {
+        dataStore.usuarios = usuariosSnap.docs.map(d => d.data());
+      } else if (dataStore.usuarios.length > 0) {
+        for (const usuario of dataStore.usuarios) {
           await setDoc(doc(window.db, 'usuarios', usuario.id.toString()), usuario);
         }
       }
-      dataStore.usuarios = usuariosSnap.docs.map(doc => doc.data()) || initialUsuarios;
 
-      // Cargar plan
+      // Cargar plan desde Firebase
       const planSnap = await getDocs(collection(window.db, 'plan'));
-      dataStore.plan = {};
-      planSnap.forEach(doc => {
-        dataStore.plan[doc.id] = doc.data();
-      });
-
+      if (!planSnap.empty) {
+        dataStore.plan = {};
+        planSnap.forEach(d => {
+          dataStore.plan[d.id] = d.data();
+        });
+      }
     } catch (error) {
-      console.error('Error loading data from Firebase:', error);
-      // Fallback
-      dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
-      dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
-      dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
-      dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
+      console.error('Error syncing with Firebase:', error);
+      // Ya tenemos datos de localStorage, así que continuamos
     }
-  } else {
-    // Fallback a localStorage
-    dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
-    dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
-    dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
-    dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
   }
 }
 
