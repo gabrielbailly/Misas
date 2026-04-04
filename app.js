@@ -6,6 +6,12 @@ const STORAGE = {
   currentUser: 'misas_current_user'
 };
 
+const homeCalendarState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  selectedDate: new Date()
+};
+
 const elements = {
   loginScreen: document.getElementById('login-screen'),
   mainScreen: document.getElementById('main-screen'),
@@ -118,12 +124,12 @@ function formatDay(date) {
   return date.toLocaleDateString('es-ES', options);
 }
 
-function getWeekDates() {
+function getWeekDates(startDate = new Date()) {
   const result = [];
-  const today = new Date();
+  const current = new Date(startDate);
   for (let i = 0; i < 7; i += 1) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    const d = new Date(current);
+    d.setDate(current.getDate() + i);
     result.push(d);
   }
   return result;
@@ -138,21 +144,21 @@ function renderHome() {
   const sacerdotes = getData(STORAGE.sacerdotes);
 
   const visibleCenters = user.tipo === 'centro' ? centros.filter(c => c.id === user.centroId) : centros;
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-  const todayDay = today.getDate();
+  const currentDate = homeCalendarState.selectedDate;
+  const selectedKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+  const selectedDay = currentDate.getDate();
 
   const todayMisas = visibleCenters.map(centro => {
-    const sacerdoteId = plan[todayKey]?.[todayDay]?.[centro.id] || null;
+    const sacerdoteId = plan[selectedKey]?.[selectedDay]?.[centro.id] || null;
     const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
     return {
       centro: centro.nombre,
       sacerdote: sacerdote ? sacerdote.nombre : null,
-      hora: (today.getDay() === 0 || today.getDay() === 6) ? centro.horaFinSemana : centro.horaSemana
+      hora: (currentDate.getDay() === 0 || currentDate.getDay() === 6) ? centro.horaFinSemana : centro.horaSemana
     };
   });
 
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(currentDate);
   const weekHtml = weekDates.map(d => {
     const day = d.getDate();
     const month = d.getMonth() + 1;
@@ -178,11 +184,15 @@ function renderHome() {
     `;
   }).join('');
 
-  const calendarHtml = renderCalendar(today.getFullYear(), today.getMonth());
+  const calendarHtml = renderCalendar(homeCalendarState.year, homeCalendarState.month, currentDate);
+
+  const selectedLabel = currentDate.toDateString() === new Date().toDateString()
+    ? 'Misas de hoy'
+    : `Misas de ${formatDay(currentDate)}`;
 
   const todayContent = todayMisas.some(m => m.sacerdote)
     ? `<ul>${todayMisas.map(m => `<li>${m.centro} — ${m.hora} — <strong>${m.sacerdote}</strong></li>`).join('')}</ul>`
-    : '<p class="empty-state">No hay misas programadas para hoy.</p>';
+    : '<p class="empty-state">No hay misas programadas para este día.</p>';
 
   const printButtonHtml = user.tipo === 'centro'
     ? '<button id="print-center-month" class="secondary">Imprimir misas del mes de mi centro</button>'
@@ -191,8 +201,8 @@ function renderHome() {
   const html = `
     <section class="home-header card">
       <div>
-        <p class="eyebrow">Misas de hoy</p>
-        <h2>${formatDay(today)}</h2>
+        <p class="eyebrow">${selectedLabel}</p>
+        <h2>${formatDay(currentDate)}</h2>
         ${todayContent}
       </div>
       <div class="home-header-actions">
@@ -203,10 +213,10 @@ function renderHome() {
     <section class="home-grid">
       <div class="card calendar-card">
         <div class="calendar-header">
-          <h3>${today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h3>
+          <h3>${new Date(homeCalendarState.year, homeCalendarState.month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h3>
           <div class="calendar-nav">
-            <button class="nav-btn">&#8249;</button>
-            <button class="nav-btn">&#8250;</button>
+            <button id="month-prev" class="nav-btn">&#8249;</button>
+            <button id="month-next" class="nav-btn">&#8250;</button>
           </div>
         </div>
         ${calendarHtml}
@@ -225,6 +235,15 @@ function renderHome() {
 
   elements.homeView.innerHTML = html;
 
+  document.getElementById('month-prev').addEventListener('click', () => changeHomeCalendarMonth(-1));
+  document.getElementById('month-next').addEventListener('click', () => changeHomeCalendarMonth(1));
+  document.querySelectorAll('.calendar-day:not(.empty)').forEach(dayEl => {
+    dayEl.addEventListener('click', () => {
+      const dayNumber = Number(dayEl.textContent.trim());
+      selectHomeCalendarDay(homeCalendarState.year, homeCalendarState.month, dayNumber);
+    });
+  });
+
   if (user.tipo === 'centro') {
     document.getElementById('print-center-month').addEventListener('click', () => printSchedule(user.centroId));
   } else {
@@ -232,7 +251,7 @@ function renderHome() {
   }
 }
 
-function renderCalendar(year, month) {
+function renderCalendar(year, month, selectedDate) {
   const daysInMonth = getDaysInMonth(year, month + 1);
   const firstDay = new Date(year, month, 1).getDay();
   const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -246,7 +265,8 @@ function renderCalendar(year, month) {
   const today = new Date();
   for (let day = 1; day <= daysInMonth; day += 1) {
     const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    daysHtml += `<div class="calendar-day${isToday ? ' today' : ''}">${day}</div>`;
+    const isSelected = selectedDate && day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
+    daysHtml += `<div class="calendar-day${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}">${day}</div>`;
   }
 
   return `
@@ -255,6 +275,19 @@ function renderCalendar(year, month) {
       ${daysHtml}
     </div>
   `;
+}
+
+function changeHomeCalendarMonth(delta) {
+  const date = new Date(homeCalendarState.year, homeCalendarState.month + delta, 1);
+  homeCalendarState.year = date.getFullYear();
+  homeCalendarState.month = date.getMonth();
+  homeCalendarState.selectedDate = new Date(date.getFullYear(), date.getMonth(), 1);
+  renderHome();
+}
+
+function selectHomeCalendarDay(year, month, day) {
+  homeCalendarState.selectedDate = new Date(year, month, day);
+  renderHome();
 }
 
 function setupAdminTabs() {

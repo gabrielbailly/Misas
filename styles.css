@@ -125,11 +125,20 @@ main { background: #fff; border-radius: 10px; border: 1px solid #dbe2ea; padding
   background: #f8fbff;
   color: #102a43;
   padding: 8px 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
-.calendar-day.today {
+.calendar-day:hover:not(.empty):not(.selected) {
+  background: #dbeafe;
+}
+.calendar-day.today,
+.calendar-day.selected {
   background: #1e84ff;
   color: #fff;
   box-shadow: 0 12px 28px rgba(30, 132, 255, 0.24);
+}
+.calendar-day.selected {
+  border: 2px solid #0f62ff;
 }
 .calendar-day.empty {
   background: transparent;
