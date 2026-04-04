@@ -473,11 +473,41 @@ function renderMisasMes() {
 
   html += '</tbody></table>';
   html += '<button id="save-misas-btn">Guardar mes</button> <button id="print-misas-btn" class="secondary">Imprimir tabla</button>';
+  html += '<p class="error" id="misas-error"></p>';
   elements.adminSections.misas.innerHTML = html;
+
+  document.querySelectorAll('#misas-table select').forEach(select => {
+    select.addEventListener('change', () => updateMisasValidation());
+  });
 
   document.getElementById('load-mesas-btn').addEventListener('click', () => renderMisasMes());
   document.getElementById('save-misas-btn').addEventListener('click', () => saveMisasMonth());
   document.getElementById('print-misas-btn').addEventListener('click', () => printSchedule());
+}
+
+function updateMisasValidation() {
+  const errorElement = document.getElementById('misas-error');
+  if (!errorElement) return;
+
+  const rows = document.querySelectorAll('#misas-table tbody tr');
+  let errorMessage = '';
+
+  rows.forEach(row => {
+    const assigned = {};
+    row.querySelectorAll('select').forEach(select => {
+      const value = select.value;
+      if (!value) return;
+      assigned[value] = assigned[value] || 0;
+      assigned[value] += 1;
+    });
+
+    const duplicate = Object.values(assigned).some(count => count > 1);
+    if (duplicate) {
+      errorMessage = 'Un mismo sacerdote no puede estar asignado en más de un centro el mismo día.';
+    }
+  });
+
+  errorElement.textContent = errorMessage;
 }
 
 function saveMisasMonth() {
@@ -490,6 +520,32 @@ function saveMisasMonth() {
   const [year, month] = monthInput.split('-').map(Number);
   const days = getDaysInMonth(year, month);
   const key = `${year}-${String(month).padStart(2, '0')}`;
+
+  document.getElementById('misas-error').textContent = '';
+  let invalid = false;
+
+  for (let d = 1; d <= days; d += 1) {
+    const assigned = {};
+    centros.forEach(c => {
+      const select = document.querySelector(`select[data-dia="${d}"][data-centro="${c.id}"]`);
+      if (!select) return;
+      const sacerdoteId = select.value ? Number(select.value) : null;
+      if (!sacerdoteId) return;
+      assigned[sacerdoteId] = assigned[sacerdoteId] || 0;
+      assigned[sacerdoteId] += 1;
+    });
+
+    if (Object.values(assigned).some(count => count > 1)) {
+      invalid = true;
+      break;
+    }
+  }
+
+  if (invalid) {
+    document.getElementById('misas-error').textContent = 'Un mismo sacerdote no puede estar asignado en más de un centro el mismo día.';
+    return;
+  }
+
   if (!plan[key]) plan[key] = {};
 
   for (let d = 1; d <= days; d += 1) {
