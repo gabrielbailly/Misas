@@ -80,7 +80,7 @@ async function initData() {
     { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
   ];
   const initialUsuarios = [
-    { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin', tipo: 'administrador', centroId: null },
+    { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin12', tipo: 'administrador', centroId: null },
     { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
     { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
   ];
