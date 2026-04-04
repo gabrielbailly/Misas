@@ -69,6 +69,7 @@ main { background: #fff; border-radius: 10px; border: 1px solid #dbe2ea; padding
   background: #fff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 18px 35px rgba(16, 42, 67, 0.08);
+  overflow-x: auto;
 }
 .calendar-header,
 .week-panel-header {
@@ -100,17 +101,24 @@ main { background: #fff; border-radius: 10px; border: 1px solid #dbe2ea; padding
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
-  grid-auto-rows: minmax(50px, auto);
+  grid-auto-rows: minmax(54px, auto);
+  justify-items: stretch;
+  align-items: stretch;
   text-align: center;
+  width: 100%;
+}
+.calendar-weekday,
+.calendar-day {
+  width: 100%;
 }
 .calendar-weekday {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #6b7d96;
   text-transform: uppercase;
-  padding-top: 6px;
+  padding: 10px 0 6px;
 }
 .calendar-day {
-  min-height: 52px;
+  min-height: 54px;
   display: grid;
   place-items: center;
   border-radius: 16px;
