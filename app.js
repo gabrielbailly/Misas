@@ -6,19 +6,6 @@ const STORAGE = {
   currentUser: 'misas_current_user'
 };
 
-const dataStore = {
-  centros: [],
-  sacerdotes: [],
-  usuarios: [],
-  plan: {}
-};
-
-const homeCalendarState = {
-  year: new Date().getFullYear(),
-  month: new Date().getMonth(),
-  selectedDate: new Date()
-};
-
 const elements = {
   loginScreen: document.getElementById('login-screen'),
   mainScreen: document.getElementById('main-screen'),
@@ -26,7 +13,6 @@ const elements = {
   loginEmail: document.getElementById('login-email'),
   loginPassword: document.getElementById('login-password'),
   loginError: document.getElementById('login-error'),
-  loginLoading: document.getElementById('login-loading'),
   currentUser: document.getElementById('current-user'),
   subtitle: document.getElementById('subtitle'),
   logoutBtn: document.getElementById('logout-btn'),
@@ -46,127 +32,38 @@ const elements = {
 };
 
 function getData(key, fallback = []) {
-  // Retorna del cache en memoria (dataStore)
-  // Los datos se cargan desde Firebase en initData()
-  return dataStore[key] || fallback;
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+  try { return JSON.parse(raw) || fallback; } catch { return fallback; }
 }
+function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 
-function saveData(key, data) {
-  // Actualizar cache en memoria
-  dataStore[key] = data;
-  
-  // Guardar en Firebase de forma asíncrona
-  if (window.db) {
-    if (key === 'plan') {
-      Object.keys(data).forEach(async (monthKey) => {
-        try {
-          const docRef = window.doc(window.db, 'plan', monthKey);
-          await window.setDoc(docRef, data[monthKey]);
-        } catch (error) {
-          console.error('Error guardando plan en Firebase:', error);
-          alert('Error al guardar: ' + error.message);
-        }
-      });
-    } else if (Array.isArray(data)) {
-      data.forEach(async (item) => {
-        try {
-          const docRef = window.doc(window.db, key, item.id.toString());
-          await window.setDoc(docRef, item);
-        } catch (error) {
-          console.error('Error guardando en Firebase:', error);
-          alert('Error al guardar: ' + error.message);
-        }
-      });
-    }
-  } else {
-    console.warn('Firebase no está disponible. Los datos no se guardarán.');
-  }
-}
-
-
-async function initData() {
-  if (!window.db) {
-    console.error('Firebase no está inicializado');
-    elements.loginLoading.textContent = 'Error: Firebase no disponible';
-    return;
-  }
-
-  try {
-    elements.loginLoading.textContent = 'Cargando datos desde Firebase...';
-
-    // Datos iniciales
+function initData() {
+  if (!localStorage.getItem(STORAGE.centros)) {
     const initialCentros = [
       { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },
       { id: 2, nombre: 'Centro Santa María', ubicacion: 'Plaza de la Paz 5', observaciones: 'Misa familiar', horaSemana: '20:00', horaFinSemana: '11:30' }
     ];
-    const initialSacerdotes = [
+    saveData(STORAGE.centros, initialCentros);
+  }
+  if (!localStorage.getItem(STORAGE.sacerdotes)) {
+    const initial = [
       { id: 1, nombre: 'Padre Pedro', telefono: '600123456' },
       { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
     ];
-    const initialUsuarios = [
-      { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin12', tipo: 'administrador', centroId: null },
+    saveData(STORAGE.sacerdotes, initial);
+  }
+  if (!localStorage.getItem(STORAGE.usuarios)) {
+    const users = [
+      { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin', tipo: 'administrador', centroId: null },
       { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
       { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
     ];
-
-    // Cargar centros desde Firebase
-    const centrosSnap = await window.getDocs(window.collection(window.db, 'centros'));
-    if (centrosSnap.empty) {
-      console.log('Creando colección centros en Firebase...');
-      for (const centro of initialCentros) {
-        await window.setDoc(window.doc(window.db, 'centros', centro.id.toString()), centro);
-      }
-      dataStore.centros = initialCentros;
-    } else {
-      dataStore.centros = centrosSnap.docs.map(d => d.data());
-    }
-
-    // Cargar sacerdotes desde Firebase
-    const sacerdotesSnap = await window.getDocs(window.collection(window.db, 'sacerdotes'));
-    if (sacerdotesSnap.empty) {
-      console.log('Creando colección sacerdotes en Firebase...');
-      for (const sacerdote of initialSacerdotes) {
-        await window.setDoc(window.doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
-      }
-      dataStore.sacerdotes = initialSacerdotes;
-    } else {
-      dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data());
-    }
-
-    // Cargar usuarios desde Firebase
-    const usuariosSnap = await window.getDocs(window.collection(window.db, 'usuarios'));
-    if (usuariosSnap.empty) {
-      console.log('Creando colección usuarios en Firebase...');
-      for (const usuario of initialUsuarios) {
-        await window.setDoc(window.doc(window.db, 'usuarios', usuario.id.toString()), usuario);
-      }
-      dataStore.usuarios = initialUsuarios;
-    } else {
-      dataStore.usuarios = usuariosSnap.docs.map(d => d.data());
-    }
-
-    // Cargar plan desde Firebase
-    const planSnap = await window.getDocs(window.collection(window.db, 'plan'));
-    if (planSnap.empty) {
-      console.log('Colección plan lista (vacía)');
-      dataStore.plan = {};
-    } else {
-      dataStore.plan = {};
-      planSnap.forEach(d => {
-        dataStore.plan[d.id] = d.data();
-      });
-    }
-
-    console.log('✓ Datos cargados desde Firebase:', {
-      centros: dataStore.centros.length,
-      sacerdotes: dataStore.sacerdotes.length,
-      usuarios: dataStore.usuarios.length,
-      planKeys: Object.keys(dataStore.plan).length
-    });
-  } catch (error) {
-    console.error('Error cargando datos:', error);
-    elements.loginLoading.textContent = 'Error: ' + error.message;
-    throw error;
+    saveData(STORAGE.usuarios, users);
+  }
+  if (!localStorage.getItem(STORAGE.plan)) {
+    const plan = {};
+    saveData(STORAGE.plan, plan);
   }
 }
 
@@ -175,12 +72,6 @@ function login(event) {
   const email = elements.loginEmail.value.trim();
   const password = elements.loginPassword.value.trim();
   const usuarios = getData(STORAGE.usuarios);
-
-  if (usuarios.length === 0) {
-    elements.loginError.textContent = 'Datos no cargados, intenta de nuevo en unos segundos.';
-    return;
-  }
-
   const user = usuarios.find((u) => u.correo.toLowerCase() === email.toLowerCase() && u.contraseña === password);
 
   if (!user) {
@@ -227,12 +118,12 @@ function formatDay(date) {
   return date.toLocaleDateString('es-ES', options);
 }
 
-function getWeekDates(startDate = new Date()) {
+function getWeekDates() {
   const result = [];
-  const current = new Date(startDate);
+  const today = new Date();
   for (let i = 0; i < 7; i += 1) {
-    const d = new Date(current);
-    d.setDate(current.getDate() + i);
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
     result.push(d);
   }
   return result;
@@ -247,173 +138,39 @@ function renderHome() {
   const sacerdotes = getData(STORAGE.sacerdotes);
 
   const visibleCenters = user.tipo === 'centro' ? centros.filter(c => c.id === user.centroId) : centros;
-  const currentDate = homeCalendarState.selectedDate;
-  const selectedKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const selectedDay = currentDate.getDate();
+  let html = '<h2>Misas de la semana</h2>';
 
-  const todayMisas = visibleCenters.map(centro => {
-    const sacerdoteId = plan[selectedKey]?.[selectedDay]?.[centro.id] || null;
-    const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
-    return {
-      centro: centro.nombre,
-      sacerdote: sacerdote ? sacerdote.nombre : null,
-      hora: (currentDate.getDay() === 0 || currentDate.getDay() === 6) ? centro.horaFinSemana : centro.horaSemana
-    };
-  });
+  const dias = getWeekDates();
+  html += '<table><thead><tr><th>Día</th><th>Centro</th><th>Hora</th><th>Sacerdote asignado</th></tr></thead><tbody>';
 
-  const weekDates = getWeekDates(currentDate);
-  const weekHtml = weekDates.map(d => {
+  dias.forEach(d => {
     const day = d.getDate();
     const month = d.getMonth() + 1;
-    const key = `${d.getFullYear()}-${String(month).padStart(2, '0')}`;
-    const misas = visibleCenters.map(centro => {
-      const sacerdoteId = plan[key]?.[day]?.[centro.id] || null;
-      const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
-      return {
-        centro: centro.nombre,
-        sacerdote: sacerdote ? sacerdote.nombre : null
-      };
-    }).filter(item => item.sacerdote);
+    const key = `${d.getFullYear()}-${month.toString().padStart(2, '0')}`;
+    visibleCenters.forEach((centro, idx) => {
+      const data = plan[key] && plan[key][day]?.[centro.id] || null;
+      const sacerdote = sacerdotes.find(s => s.id === data)?.nombre || 'Sin asignar';
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      const hora = isWeekend ? centro.horaFinSemana : centro.horaSemana;
 
-    const content = misas.length
-      ? misas.map(item => `<li class="flex justify-between items-center py-1"><span>${item.centro}:</span> <strong class="text-blue-600">${item.sacerdote}</strong></li>`).join('')
-      : '<p class="text-gray-500 text-sm">No hay misas programadas.</p>';
+      html += `<tr><td>${formatDay(d)}</td><td>${centro.nombre}</td><td>${hora}</td><td>${sacerdote}</td></tr>`;
+    });
+  });
 
-    return `
-      <article class="bg-gray-50 rounded-lg p-4">
-        <h3 class="font-medium text-gray-900 mb-2">${formatDay(d)}</h3>
-        <ul class="space-y-1">${content}</ul>
-      </article>
-    `;
-  }).join('');
-
-  const calendarHtml = renderCalendar(homeCalendarState.year, homeCalendarState.month, currentDate);
-
-  const selectedLabel = currentDate.toDateString() === new Date().toDateString()
-    ? 'Misas de hoy'
-    : `Misas de ${formatDay(currentDate)}`;
-
-  const todayContent = todayMisas.some(m => m.sacerdote)
-    ? `<ul class="space-y-2 mt-4">${todayMisas.map(m => `<li class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md"><span>${m.centro} — ${m.hora}</span><strong class="text-blue-600">${m.sacerdote}</strong></li>`).join('')}</ul>`
-    : '<p class="text-gray-500 mt-4">No hay misas programadas para este día.</p>';
-
-  const printButtonHtml = user.tipo === 'centro'
-    ? '<button id="print-center-month" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">Imprimir misas del mes de mi centro</button>'
-    : '<button id="print-all-month" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">Imprimir misas del mes de todos los centros</button>';
-
-  const html = `
-    <section class="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-sm text-gray-500 uppercase tracking-wide">${selectedLabel}</p>
-          <h2 class="text-2xl font-bold text-gray-900 mt-1">${formatDay(currentDate)}</h2>
-          ${todayContent}
-        </div>
-        <div class="flex gap-2">
-          ${printButtonHtml}
-        </div>
-      </div>
-    </section>
-
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">${new Date(homeCalendarState.year, homeCalendarState.month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h3>
-          <div class="flex gap-1">
-            <button id="month-prev" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Mes anterior">&#8249;</button>
-            <button id="month-next" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Mes siguiente">&#8250;</button>
-          </div>
-        </div>
-        ${calendarHtml}
-      </div>
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Misas semana</h3>
-          <span class="text-sm text-gray-500">${formatDay(weekDates[0])} al ${formatDay(weekDates[6])}</span>
-        </div>
-        <div class="space-y-4">
-          ${weekHtml}
-        </div>
-      </div>
-    </section>
-  `;
+  html += '</tbody></table>';
+  if (user.tipo === 'centro') {
+    html += '<button id="print-center-month" class="secondary">Imprimir misas del mes de mi centro</button>';
+  } else {
+    html += '<button id="print-all-month" class="secondary">Imprimir misas del mes de todos los centros</button>';
+  }
 
   elements.homeView.innerHTML = html;
 
-  // Usar event delegation en lugar de listeners directos
-  elements.homeView.addEventListener('click', (e) => {
-    if (e.target.id === 'month-prev') {
-      e.preventDefault();
-      changeHomeCalendarMonth(-1);
-    }
-    if (e.target.id === 'month-next') {
-      e.preventDefault();
-      changeHomeCalendarMonth(1);
-    }
-    if (e.target.classList.contains('calendar-day') && !e.target.classList.contains('empty')) {
-      const dayNumber = Number(e.target.textContent.trim());
-      selectHomeCalendarDay(homeCalendarState.year, homeCalendarState.month, dayNumber);
-    }
-  });
-
-  // Event listeners para botones de impresión
-  const printCenterBtn = document.getElementById('print-center-month');
-  const printAllBtn = document.getElementById('print-all-month');
-  
-  if (printCenterBtn && user.tipo === 'centro') {
-    printCenterBtn.addEventListener('click', () => printSchedule(user.centroId));
+  if (user.tipo === 'centro') {
+    document.getElementById('print-center-month').addEventListener('click', () => printSchedule(user.centroId));
+  } else {
+    document.getElementById('print-all-month').addEventListener('click', () => printSchedule());
   }
-  if (printAllBtn && user.tipo !== 'centro') {
-    printAllBtn.addEventListener('click', () => printSchedule());
-  }
-}
-
-function renderCalendar(year, month, selectedDate) {
-  const daysInMonth = getDaysInMonth(year, month + 1);
-  const firstDay = new Date(year, month, 1).getDay();
-  const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
-  let daysHtml = '';
-
-  for (let i = 0; i < offset; i += 1) {
-    daysHtml += '<div class="calendar-day empty h-10 w-10"></div>';
-  }
-
-  const today = new Date();
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    const isSelected = selectedDate && day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
-    const baseClasses = 'calendar-day h-10 w-10 flex items-center justify-center rounded-full cursor-pointer hover:bg-blue-100 transition-colors';
-    const todayClasses = isToday ? ' bg-blue-500 text-white' : '';
-    const selectedClasses = isSelected ? ' bg-blue-600 text-white' : '';
-    daysHtml += `<div class="${baseClasses}${todayClasses}${selectedClasses}">${day}</div>`;
-  }
-
-  return `
-    <div class="grid grid-cols-7 gap-1">
-      ${dayNames.map(name => `<div class="text-center font-semibold text-gray-600 py-2">${name}</div>`).join('')}
-      ${daysHtml}
-    </div>
-  `;
-}
-
-function changeHomeCalendarMonth(delta) {
-  const currentDay = homeCalendarState.selectedDate.getDate();
-  const newDate = new Date(homeCalendarState.year, homeCalendarState.month + delta, 1);
-  const newYear = newDate.getFullYear();
-  const newMonth = newDate.getMonth();
-  const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
-  const targetDay = Math.min(currentDay, daysInNewMonth);
-  
-  homeCalendarState.year = newYear;
-  homeCalendarState.month = newMonth;
-  homeCalendarState.selectedDate = new Date(newYear, newMonth, targetDay);
-  renderHome();
-}
-
-function selectHomeCalendarDay(year, month, day) {
-  homeCalendarState.selectedDate = new Date(year, month, day);
-  renderHome();
 }
 
 function setupAdminTabs() {
@@ -704,10 +461,10 @@ function renderMisasMes() {
     centros.forEach(c => {
       const key = `${year}-${String(month).padStart(2, '0')}`;
       const assigned = plan[key]?.[d]?.[c.id] || '';
-      html += '<td><select data-dia="' + d + '" data-centro="' + c.id + '" data-previous-value="' + assigned + '">';
+      html += '<td><select data-dia="' + d + '" data-centro="' + c.id + '">';
       html += '<option value="">--</option>';
       sacerdotes.forEach(s => {
-        html += `<option value="${s.id}" ${s.id == assigned ? 'selected' : ''}>${s.nombre}</option>`;
+        html += `<option value="${s.id}" ${s.id === assigned ? 'selected' : ''}>${s.nombre}</option>`;
       });
       html += '</select></td>';
     });
@@ -716,72 +473,11 @@ function renderMisasMes() {
 
   html += '</tbody></table>';
   html += '<button id="save-misas-btn">Guardar mes</button> <button id="print-misas-btn" class="secondary">Imprimir tabla</button>';
-  html += '<p class="error" id="misas-error"></p>';
   elements.adminSections.misas.innerHTML = html;
-
-  // Inicializar selects
-  document.querySelectorAll('#misas-table tbody tr').forEach(row => updateSelectsForDay(row, sacerdotes));
-
-  document.querySelectorAll('#misas-table select').forEach(select => {
-    select.addEventListener('change', (e) => {
-      const row = e.target.closest('tr');
-      updateSelectsForDay(row, sacerdotes);
-    });
-  });
 
   document.getElementById('load-mesas-btn').addEventListener('click', () => renderMisasMes());
   document.getElementById('save-misas-btn').addEventListener('click', () => saveMisasMonth());
   document.getElementById('print-misas-btn').addEventListener('click', () => printSchedule());
-}
-
-function updateSelectsForDay(row, sacerdotes) {
-  const selects = Array.from(row.querySelectorAll('select'));
-  const assigned = new Set();
-
-  // Recopilar sacerdotes ya asignados en esta fila
-  selects.forEach(select => {
-    if (select.value) assigned.add(select.value);
-  });
-
-  // Para cada select, actualizar opciones
-  selects.forEach(select => {
-    const currentValue = select.value;
-    // Limpiar opciones excepto la vacía y la seleccionada
-    const options = select.querySelectorAll('option');
-    options.forEach(option => {
-      if (option.value === '' || option.value === currentValue) return;
-      if (assigned.has(option.value) && option.value !== currentValue) {
-        option.style.display = 'none';
-      } else {
-        option.style.display = '';
-      }
-    });
-  });
-}
-
-function updateMisasValidation() {
-  const errorElement = document.getElementById('misas-error');
-  if (!errorElement) return;
-
-  const rows = document.querySelectorAll('#misas-table tbody tr');
-  let errorMessage = '';
-
-  rows.forEach(row => {
-    const assigned = {};
-    row.querySelectorAll('select').forEach(select => {
-      const value = select.value;
-      if (!value) return;
-      assigned[value] = assigned[value] || 0;
-      assigned[value] += 1;
-    });
-
-    const duplicate = Object.values(assigned).some(count => count > 1);
-    if (duplicate) {
-      errorMessage = 'Un mismo sacerdote no puede estar asignado en más de un centro el mismo día.';
-    }
-  });
-
-  errorElement.textContent = errorMessage;
 }
 
 function saveMisasMonth() {
@@ -794,7 +490,6 @@ function saveMisasMonth() {
   const [year, month] = monthInput.split('-').map(Number);
   const days = getDaysInMonth(year, month);
   const key = `${year}-${String(month).padStart(2, '0')}`;
-
   if (!plan[key]) plan[key] = {};
 
   for (let d = 1; d <= days; d += 1) {
@@ -888,12 +583,8 @@ function bindEvents() {
   });
 }
 
-async function initApp() {
-  elements.loginLoading.style.display = 'block';
-  elements.loginForm.style.display = 'none';
-  await initData();
-  elements.loginLoading.style.display = 'none';
-  elements.loginForm.style.display = 'grid';
+function initApp() {
+  initData();
   bindEvents();
 
   const currentUser = getCurrentUser();
