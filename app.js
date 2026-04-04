@@ -26,6 +26,7 @@ const elements = {
   loginEmail: document.getElementById('login-email'),
   loginPassword: document.getElementById('login-password'),
   loginError: document.getElementById('login-error'),
+  loginLoading: document.getElementById('login-loading'),
   currentUser: document.getElementById('current-user'),
   subtitle: document.getElementById('subtitle'),
   logoutBtn: document.getElementById('logout-btn'),
@@ -150,6 +151,12 @@ function login(event) {
   const email = elements.loginEmail.value.trim();
   const password = elements.loginPassword.value.trim();
   const usuarios = getData(STORAGE.usuarios);
+
+  if (usuarios.length === 0) {
+    elements.loginError.textContent = 'Datos no cargados, intenta de nuevo en unos segundos.';
+    return;
+  }
+
   const user = usuarios.find((u) => u.correo.toLowerCase() === email.toLowerCase() && u.contraseña === password);
 
   if (!user) {
@@ -847,7 +854,11 @@ function bindEvents() {
 }
 
 async function initApp() {
+  elements.loginLoading.style.display = 'block';
+  elements.loginForm.style.display = 'none';
   await initData();
+  elements.loginLoading.style.display = 'none';
+  elements.loginForm.style.display = 'grid';
   bindEvents();
 
   const currentUser = getCurrentUser();
