@@ -51,10 +51,21 @@ function getData(key, fallback = []) {
 function saveData(key, data) {
   dataStore[key] = data;
   if (window.db) {
-    const docRef = doc(window.db, 'data', key);
-    setDoc(docRef, { value: data }).catch(console.error);
+    if (key === 'plan') {
+      // Para plan, guardar cada mes como documento
+      Object.keys(data).forEach(async (monthKey) => {
+        const docRef = doc(window.db, 'plan', monthKey);
+        await setDoc(docRef, data[monthKey]).catch(console.error);
+      });
+    } else {
+      // Para arrays, guardar cada item como documento
+      data.forEach(async (item) => {
+        const docRef = doc(window.db, key, item.id.toString());
+        await setDoc(docRef, item).catch(console.error);
+      });
+    }
   } else {
-    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(STORAGE[key], JSON.stringify(data));
   }
 }
 
@@ -76,22 +87,48 @@ async function initData() {
   const initialPlan = {};
 
   if (window.db) {
-    // Cargar desde Firestore
-    const keys = ['centros', 'sacerdotes', 'usuarios', 'plan'];
-    for (const key of keys) {
-      const docRef = doc(window.db, 'data', key);
-      try {
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          dataStore[key] = docSnap.data().value;
-        } else {
-          dataStore[key] = eval(`initial${key.charAt(0).toUpperCase() + key.slice(1)}`);
-          await setDoc(docRef, { value: dataStore[key] });
+    try {
+      // Cargar centros
+      const centrosSnap = await getDocs(collection(window.db, 'centros'));
+      if (centrosSnap.empty) {
+        for (const centro of initialCentros) {
+          await setDoc(doc(window.db, 'centros', centro.id.toString()), centro);
         }
-      } catch (error) {
-        console.error(`Error loading ${key}:`, error);
-        dataStore[key] = eval(`initial${key.charAt(0).toUpperCase() + key.slice(1)}`);
       }
+      dataStore.centros = centrosSnap.docs.map(doc => doc.data()) || initialCentros;
+
+      // Cargar sacerdotes
+      const sacerdotesSnap = await getDocs(collection(window.db, 'sacerdotes'));
+      if (sacerdotesSnap.empty) {
+        for (const sacerdote of initialSacerdotes) {
+          await setDoc(doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
+        }
+      }
+      dataStore.sacerdotes = sacerdotesSnap.docs.map(doc => doc.data()) || initialSacerdotes;
+
+      // Cargar usuarios
+      const usuariosSnap = await getDocs(collection(window.db, 'usuarios'));
+      if (usuariosSnap.empty) {
+        for (const usuario of initialUsuarios) {
+          await setDoc(doc(window.db, 'usuarios', usuario.id.toString()), usuario);
+        }
+      }
+      dataStore.usuarios = usuariosSnap.docs.map(doc => doc.data()) || initialUsuarios;
+
+      // Cargar plan
+      const planSnap = await getDocs(collection(window.db, 'plan'));
+      dataStore.plan = {};
+      planSnap.forEach(doc => {
+        dataStore.plan[doc.id] = doc.data();
+      });
+
+    } catch (error) {
+      console.error('Error loading data from Firebase:', error);
+      // Fallback
+      dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
+      dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
+      dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
+      dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
     }
   } else {
     // Fallback a localStorage
