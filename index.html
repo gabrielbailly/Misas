@@ -114,6 +114,11 @@ const firebaseConfig = {
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     window.db = getFirestore(app);
+    window.doc = doc;
+    window.getDoc = getDoc;
+    window.setDoc = setDoc;
+    window.collection = collection;
+    window.getDocs = getDocs;
     const auth = getAuth(app);
 
     // Sign in anonymously
