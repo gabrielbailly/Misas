@@ -1,0 +1,2666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misas Logroño</title>
+    <!-- Favicon de la iglesia -->
+    <link rel="icon" href="https://www.svgrepo.com/show/404964/church.svg" type="image/svg+xml">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Custom modal styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px; /* Adjusted for forms */
+            width: 90%;
+            text-align: left; /* Changed to left for forms */
+            position: relative; /* For close button positioning */
+        }
+        .modal-close-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #ef4444; /* Red for close */
+        }
+        .modal-buttons {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end; /* Align buttons to the right */
+            gap: 1rem;
+        }
+
+        /* Styles for the priest contact modal */
+        #priest-contact-modal .modal-content {
+            max-width: 400px;
+            text-align: center;
+        }
+        #priest-contact-modal .contact-icons {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        #priest-contact-modal .contact-icon-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            color: #3b82f6; /* Blue for icons */
+            transition: color 0.2s;
+        }
+        #priest-contact-modal .contact-icon-wrapper:hover {
+            color: #2563eb;
+        }
+        #priist-contact-modal .contact-icon-wrapper svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        #priest-contact-modal .contact-icon-wrapper span {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Login View -->
+    <div id="login-view" class="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
+            <h2 class="text-3xl font-bold text-gray-700 mb-6">Iniciar Sesión</h2>
+            <input type="email" id="login-email" placeholder="Email" class="mb-4 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <input type="password" id="login-password" placeholder="Contraseña" class="mb-6 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <button id="login-btn" class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">Entrar</button>
+        </div>
+    </div>
+
+
+    <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-7xl hidden">
+        
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-gray-700">Misas Logroño</h1>
+            <p class="text-gray-500 mt-2">Organiza las celebraciones en los centros de la ciudad.</p>
+             <!-- Navigation Bar -->
+            <nav class="mt-4 flex justify-center space-x-4">
+                <button id="home-nav-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow">Inicio</button>
+                <button id="admin-nav-btn" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors shadow">Administración</button>
+                <button id="logout-btn" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow">Cerrar Sesión</button>
+            </nav>
+        </header>
+
+        <div id="loading-indicator" class="flex justify-center items-center h-64">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+        </div>
+
+        <main id="main-content" class="hidden">
+            <!-- Home Page Content -->
+            <div id="home-view" class="grid grid-cols-1 gap-6">
+                <!-- Misas de Hoy - Now spans full width on all screens -->
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 id="today-masses-title" class="text-xl font-semibold">Misas de hoy (Viernes, 6 de junio)</h2>
+                    </div>
+                    <div id="today-masses-list" class="space-y-4">
+                        <!-- Today's masses will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Container for Mini-Calendario and Misas de la Semana -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Mini-Calendario del Mes - Spans 1 column of 3 on medium/large screens -->
+                    <div class="md:col-span-1 bg-white p-6 rounded-xl shadow-md">
+                        <div class="flex justify-between items-center mb-3">
+                            <button id="prev-month-btn" class="bg-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 transition-colors">&lt;</button>
+                            <h2 id="month-display" class="text-xl font-semibold"></h2>
+                            <button id="next-month-btn" class="bg-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 transition-colors">&gt;</button>
+                        </div>
+                        <div id="mini-calendar-grid" class="grid grid-cols-7 text-center gap-1">
+                            <!-- Mini-calendar will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Misas de la Semana Actual - Spans 2 columns of 3 on medium/large screens -->
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                        <h2 id="week-masses-title" class="text-xl font-semibold mb-3">Misas de la semana actual</h2>
+                        <div id="week-masses-list" class="space-y-4">
+                            <!-- Current week's masses will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Page Content -->
+            <div id="admin-view" class="hidden p-4 bg-white rounded-xl shadow-md">
+			   <!-- Después -->
+			   <div id="admin-header" class="flex items-center justify-between mb-6">
+			     <h2 id="admin-title" class="text-3xl font-bold text-gray-700 m-0">Panel de Administración</h2>
+			     <button id="back-to-admin-panel"
+			             class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors shadow hidden">
+			       &lt; Volver al Panel
+			     </button>
+			   </div>
+			   <p id="admin-description" class="text-gray-600 mb-8">
+			     Bienvenido al panel de administración. Desde aquí puedes gestionar los diferentes aspectos de la aplicación.
+			   </p>
+               
+
+                <!-- Admin Main Panel -->
+                <div id="admin-main-panel" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" data-admin-section="centers">
+                        <h3 class="text-xl font-semibold text-blue-700 mb-2">Gestionar Centros</h3>
+                        <p class="text-gray-600">Añadir, editar o eliminar centros de misa.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" data-admin-section="priests">
+                        <h3 class="text-xl font-semibold text-green-700 mb-2">Gestionar Sacerdotes</h3>
+                        <p class="text-gray-600">Administrar los datos de los sacerdotes.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" data-admin-section="schedule">
+                        <h3 class="text-xl font-semibold text-purple-700 mb-2">Calendario de Misas Mensual</h3>
+                        <p class="text-gray-600">Asignar sacerdotes a las misas del mes.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" data-admin-section="users">
+                        <h3 class="text-xl font-semibold text-red-700 mb-2">Gestionar Usuarios</h3>
+                        <p class="text-gray-600">Administrar cuentas de usuario y roles.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200" data-admin-section="data-export">
+                        <h3 class="text-xl font-semibold text-orange-700 mb-2">Gestión de Datos (CSV)</h3>
+                        <p class="text-gray-600">Exportar o importar datos de la aplicación.</p>
+                    </div>
+                </div>
+
+                <!-- Admin Sub-sections -->
+                <div id="admin-sub-sections" class="mt-8 hidden">
+                  <!--  <button id="back-to-admin-panel" class="mb-4 px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors shadow">&lt; Volver al Panel</button> -->
+                    
+                    <!-- Gestionar Centros Section -->
+                    <div id="manage-centers-section" class="hidden">
+                      <!--   <h2 class="text-2xl font-bold mb-4">Gestionar Centros</h2> -->
+                        <button id="add-center-btn-list" class="mb-4 bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition-colors shadow">Añadir Centro</button>
+                        <div class="overflow-x-auto bg-white rounded-xl shadow-md">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Misa Semanal</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Misa Fin Semana</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="center-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Center list will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Gestionar Sacerdotes Section -->
+                    <div id="manage-priests-section" class="hidden">
+                     <!--    <h2 class="text-2xl font-bold mb-4">Gestionar Sacerdotes</h2> -->
+                        <button id="add-priest-btn-list" class="mb-4 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">Añadir Sacerdote</button>
+                        <div class="overflow-x-auto bg-white rounded-xl shadow-md">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th> <!-- New Email Column Header -->
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="priest-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Priest list will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Gestionar Usuarios Section -->
+                    <div id="manage-users-section" class="hidden">
+                   <!--      <h2 class="text-2xl font-bold mb-4">Gestionar Usuarios</h2> -->
+                        <button id="add-user-btn-list" class="mb-4 bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shadow">Añadir Usuario</button>
+                        <div class="overflow-x-auto bg-white rounded-xl shadow-md">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Centro Asignado</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- User list will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Calendario de Misas Mensual (Original Schedule Section) -->
+                    <div id="monthly-schedule-section" class="hidden">
+                   <!--      <h2 class="text-2xl font-bold mb-4">Calendario de Misas Mensual</h2> -->
+                         <!-- Navegación de la semana -->
+                        <div class="bg-white p-4 rounded-xl shadow-md mb-8 flex items-center justify-between">
+                            <button id="prev-week-btn" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">&lt; Semana Anterior</button>
+                            <h2 id="week-display" class="text-xl md:text-2xl font-bold text-center"></h2>
+                            <button id="next-week-btn" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">Semana Siguiente &gt;</button>
+                        </div>
+                        <!-- Print Button -->
+                        <button id="print-schedule-btn" aling= center class="mb-4 bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow">Imprimir Calendario Mensual</button>
+                        <!-- Calendario de planificación -->
+                        <div class="bg-white rounded-xl shadow-md overflow-x-auto">
+                            <div id="schedule-grid" class="min-w-max">
+                                <!-- El contenido se generará dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+
+			  <!-- Gestión de Datos (CSV) Section: diseño en dos columnas -->
+			  <div id="data-export-section" class="hidden">
+			    <p class="text-gray-600 mb-4">
+			      Utiliza esta sección para exportar los datos de la aplicación a formato CSV o para importar datos desde archivos CSV.
+			    </p>
+			    <p class="text-red-600 font-semibold mb-6 p-3 bg-red-100 rounded-md border border-red-300">
+			      ADVERTENCIA: La importación de datos reemplazará TODOS los datos existentes del tipo seleccionado. Realiza una exportación (copia de seguridad) antes de importar si deseas conservar los datos actuales.
+			    </p>
+
+			    <!-- Sección Centros -->
+			    <div class="data-section-card mb-8">
+			      <h3 class="text-xl font-bold mb-4">Centros</h3>
+			      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			        <!-- Columna Exportar -->
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Exportar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Descarga todos los datos de "Centros" en un archivo CSV.
+			          </p>
+			          <button id="export-centers-btn" class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">
+			            Exportar Centros a CSV
+			          </button>
+			        </div>
+			        <!-- Columna Importar -->
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Importar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Selecciona un archivo CSV para importar datos de "Centros". <span class="text-red-500 font-medium">Esto reemplazará todos los datos existentes de "Centros".</span>
+			          </p>
+			          <div class="file-input-wrapper mb-4">
+			            <label for="import-centers-file" class="file-input-label cursor-pointer text-indigo-600 underline">
+			              Seleccionar archivo
+			            </label>
+			            <input type="file" id="import-centers-file" accept=".csv" class="hidden" />
+			            <span id="import-centers-file-name" class="file-name-display ml-2">Ningún archivo seleccionado</span>
+			          </div>
+			          <button id="import-centers-btn" class="w-full bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow" disabled>
+			            Importar Centros desde CSV
+			          </button>
+			        </div>
+			      </div>
+			    </div>
+
+			    <!-- Sección Sacerdotes -->
+			    <div class="data-section-card mb-8">
+			      <h3 class="text-xl font-bold mb-4">Sacerdotes</h3>
+			      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Exportar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Descarga todos los datos de "Sacerdotes" en un archivo CSV.
+			          </p>
+			          <button id="export-priests-btn" class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">
+			            Exportar Sacerdotes a CSV
+			          </button>
+			        </div>
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Importar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Selecciona un archivo CSV para importar datos de "Sacerdotes". <span class="text-red-500 font-medium">Esto reemplazará todos los datos existentes de "Sacerdotes".</span>
+			          </p>
+			          <div class="file-input-wrapper mb-4">
+			            <label for="import-priests-file" class="file-input-label cursor-pointer text-indigo-600 underline">
+			              Seleccionar archivo
+			            </label>
+			            <input type="file" id="import-priests-file" accept=".csv" class="hidden" />
+			            <span id="import-priests-file-name" class="file-name-display ml-2">Ningún archivo seleccionado</span>
+			          </div>
+			          <button id="import-priests-btn" class="w-full bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow" disabled>
+			            Importar Sacerdotes desde CSV
+			          </button>
+			        </div>
+			      </div>
+			    </div>
+
+			    <!-- Sección Usuarios -->
+			    <div class="data-section-card mb-8">
+			      <h3 class="text-xl font-bold mb-4">Usuarios</h3>
+			      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Exportar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Descarga todos los datos de "Usuarios" en un archivo CSV.
+			          </p>
+			          <button id="export-users-btn" class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">
+			            Exportar Usuarios a CSV
+			          </button>
+			        </div>
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Importar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Selecciona un archivo CSV para importar datos de "Usuarios". <span class="text-red-500 font-medium">Esto reemplazará todos los datos existentes de "Usuarios".</span>
+			          </p>
+			          <div class="file-input-wrapper mb-4">
+			            <label for="import-users-file" class="file-input-label cursor-pointer text-indigo-600 underline">
+			              Seleccionar archivo
+			            </label>
+			            <input type="file" id="import-users-file" accept=".csv" class="hidden" />
+			            <span id="import-users-file-name" class="file-name-display ml-2">Ningún archivo seleccionado</span>
+			          </div>
+			          <button id="import-users-btn" class="w-full bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow" disabled>
+			            Importar Usuarios desde CSV
+			          </button>
+			        </div>
+			      </div>
+			    </div>
+
+			    <!-- Sección Misas -->
+			    <div class="data-section-card mb-8">
+			      <h3 class="text-xl font-bold mb-4">Misas</h3>
+			      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Exportar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Descarga todos los datos de "Misas" en un archivo CSV.
+			          </p>
+			          <button id="export-schedule-btn" class="w-full bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow">
+			            Exportar Misas a CSV
+			          </button>
+			        </div>
+			        <div>
+			          <h4 class="text-lg font-semibold mb-2">Importar Datos</h4>
+			          <p class="text-gray-600 text-sm mb-3">
+			            Selecciona un archivo CSV para importar datos de "Misas". <span class="text-red-500 font-medium">Esto reemplazará todos los datos existentes de "Misas".</span>
+			          </p>
+			          <div class="file-input-wrapper mb-4">
+			            <label for="import-schedule-file" class="file-input-label cursor-pointer text-indigo-600 underline">
+			              Seleccionar archivo
+			            </label>
+			            <input type="file" id="import-schedule-file" accept=".csv" class="hidden" />
+			            <span id="import-schedule-file-name" class="file-name-display ml-2">Ningún archivo seleccionado</span>
+			          </div>
+			          <button id="import-schedule-btn" class="w-full bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors shadow" disabled>
+			            Importar Misas desde CSV
+			          </button>
+			        </div>
+			      </div>
+			    </div>
+			  </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p>ID de Sesión: <span id="user-id" class="font-mono"></span></p>
+            <p>Rol: <span id="user-role-display" class="font-semibold"></span></p>
+        </footer>
+    </div>
+
+    <!-- Modals for forms and confirmation -->
+    <div id="custom-confirm-modal" class="modal-backdrop hidden">
+        <div class="modal-content text-center">
+            <p id="confirm-modal-text"></p>
+            <div class="modal-buttons justify-center">
+                <button id="confirm-modal-yes" class="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700">Sí</button>
+                <button id="confirm-modal-no" class="bg-gray-300 text-gray-800 font-semibold px-6 py-2 rounded-lg hover:bg-gray-400">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center Form Modal -->
+    <div id="center-form-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="window.closeModal('center-form-modal')">X</span>
+            <h3 class="text-2xl font-bold mb-4" id="center-form-title">Añadir Centro</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="center-name" class="block text-sm font-medium text-gray-700">Nombre del Centro</label>
+                    <input type="text" id="center-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="center-location" class="block text-sm font-medium text-gray-700">Ubicación</label>
+                    <input type="text" id="center-location" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="center-weekday-time" class="block text-sm font-medium text-gray-700">Hora Misa Entre Semana (HH:MM)</label>
+                    <input type="time" id="center-weekday-time" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="center-weekend-time" class="block text-sm font-medium text-gray-700">Hora Misa Fin de Semana (HH:MM)</label>
+                    <input type="time" id="center-weekend-time" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="center-notes" class="block text-sm font-medium text-gray-700">Observaciones</label>
+                    <textarea id="center-notes" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="window.closeModal('center-form-modal')" class="bg-gray-300 text-gray-800 font-semibold px-6 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                    <button id="save-center-btn" class="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Priest Form Modal -->
+    <div id="priest-form-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="window.closeModal('priest-form-modal')">X</span>
+            <h3 class="text-2xl font-bold mb-4" id="priest-form-title">Añadir Sacerdote</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="priest-name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <input type="text" id="priest-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="priest-email" class="block text-sm font-medium text-gray-700">Email</label> <!-- New Email Input -->
+                    <input type="email" id="priest-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="priest-phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                    <input type="text" id="priest-phone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="window.closeModal('priest-form-modal')" class="bg-gray-300 text-gray-800 font-semibold px-6 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                    <button id="save-priest-btn" class="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Form Modal -->
+    <div id="user-form-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="window.closeModal('user-form-modal')">X</span>
+            <h3 class="text-2xl font-bold mb-4" id="user-form-title">Añadir Usuario</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="user-name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <input type="text" id="user-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="user-email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="user-password" class="block text-sm font-medium text-gray-700">Nueva Contraseña (dejar en blanco para no cambiar)</label>
+                    <input type="password" id="user-password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Mín. 6 caracteres">
+                </div>
+                <div>
+                    <label for="user-role" class="block text-sm font-medium text-gray-700">Rol</label>
+                    <select id="user-role" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Administrador">Administrador</option>
+                        <option value="Centro">Centro</option>
+                        <option value="Sacerdote">Sacerdote</option>
+                    </select>
+                </div>
+                <div id="user-center-field" class="hidden">
+                    <label for="user-assigned-center" class="block text-sm font-medium text-gray-700">Centro Asignado</label>
+                    <select id="user-assigned-center" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <!-- Centers will be dynamically loaded here -->
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button onclick="window.closeModal('user-form-modal')" class="bg-gray-300 text-gray-800 font-semibold px-6 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+                    <button id="save-user-btn" class="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Priest Contact Modal -->
+    <div id="priest-contact-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="window.closeModal('priest-contact-modal')">X</span>
+            <h3 class="text-2xl font-bold mb-4" id="priest-contact-name"></h3>
+            <p class="text-gray-600 mb-6">Selecciona cómo quieres contactar con el sacerdote.</p>
+            <div class="contact-icons">
+                <a id="contact-phone" href="#" class="contact-icon-wrapper" target="_blank" rel="noopener noreferrer">
+                    <!-- Phone Icon (similar to 📞) from https://img.icons8.com/ios-glyphs/30/phone--v1.png -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.62 10.79a15.053 15.053 0 0 0 6.59 6.59l2.5-2.5a.997.997 0 0 1 1.01-.27l4.03 1.01a1 1 0 0 1 .89.92v3.01a2 2 0 0 1-2 2A17 17 0 0 1 1 5a2 2 0 0 1 2-2h3.01c.42 0 .81.25.92.66l1.01 4.03c.09.36-.01.76-.27 1.01l-2.5 2.5z"/>
+                    </svg>
+                    <span>Llamar</span>
+                </a>
+                <a id="contact-whatsapp" href="#" class="contact-icon-wrapper" target="_blank" rel="noopener noreferrer">
+                    <!-- WhatsApp Icon (similar to 💬) from https://img.icons8.com/ios-glyphs/30/speech-bubble--v1.png -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+                    </svg>
+                    <span>WhatsApp</span>
+                </a>
+                <a id="contact-email" href="#" class="contact-icon-wrapper" target="_blank" rel="noopener noreferrer">
+                    <!-- Email Icon (similar to ✉️) from https://img.icons8.com/ios-glyphs/30/new-post.png -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    <span>Correo</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        console.log("Script execution started."); // Log for debugging
+
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, setDoc, onSnapshot, query, deleteDoc, getDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURACIÓN DE FIREBASE ---
+		// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+		const firebaseConfig = {
+  apiKey: "AIzaSyAUfNMsadgFy-zaMtOLhonvIpCUG5KD1DA",
+  authDomain: "misas-986e3.firebaseapp.com",
+  projectId: "misas-986e3",
+  storageBucket: "misas-986e3.firebaseapp.com",
+  messagingSenderId: "550983315005",
+  appId: "1:550983315005:web:bb7dcc5bf7da82952c0454",
+  measurementId: "G-KVMVBX5YJM"
+};
+
+        // Inicialización de Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app); 
+        const db = getFirestore(app);
+
+        // Definición de appId (crucial para la base de datos).
+        // Se asegura de que appId se obtenga de la configuración o del entorno.
+        const appId = firebaseConfig.appId || (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
+
+
+        // --- VARIABLES DE ESTADO ---
+        let priests = [];
+        let centers = [];
+        let users = []; // New: for user management
+        let schedule = {}; // Store schedule data as {date: {centerId: {priestId, massTime, notes}}}
+        let currentUserId = null;
+        let currentUserRole = null; // 'Administrador', 'Centro', 'Sacerdote'
+        let currentUserAssignedCenterId = null; // For 'Centro' role
+        let currentDate = new Date(); // Used for Admin schedule view
+        let homeCurrentDate = new Date(); // Used for Home view (today's date)
+        let homeCalendarDate = new Date(); // Used for the mini-calendar in home view
+        let homeCurrentWeekDate = new Date(); // New: Used for Home view (current week's date for week masses)
+        let isAuthReady = false;
+        let unsubscribes = [];
+        let currentView = 'home'; // 'home' or 'admin'
+        let currentAdminSubSection = ''; // To track which admin section is open (e.g., 'centers', 'priests', 'users', 'schedule', 'data-export')
+
+
+        // --- ELEMENTOS DEL DOM ---
+        const appContainer = document.getElementById('app-container');
+        const loginView = document.getElementById('login-view');
+        const loginEmailInput = document.getElementById('login-email');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn'); 
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const mainContent = document.getElementById('main-content');
+        
+        // Navigation Buttons
+        const homeNavBtn = document.getElementById('home-nav-btn');
+        const adminNavBtn = document.getElementById('admin-nav-btn');
+        const backToAdminPanelBtn = document.getElementById('back-to-admin-panel');
+
+        // Home view elements
+        const homeView = document.getElementById('home-view');
+        const todayMassesTitle = document.getElementById('today-masses-title');
+        const todayMassesList = document.getElementById('today-masses-list');
+        const monthDisplay = document.getElementById('month-display');
+        const miniCalendarGrid = document.getElementById('mini-calendar-grid');
+        const prevMonthBtn = document.getElementById('prev-month-btn');
+        const nextMonthBtn = document.getElementById('next-month-btn');
+        const weekMassesTitle = document.getElementById('week-masses-title');
+        const weekMassesList = document.getElementById('week-masses-list');
+
+        // Admin View Elements (Main Panel)
+        const adminView = document.getElementById('admin-view');
+        const adminMainPanel = document.getElementById('admin-main-panel');
+        const adminSubSections = document.getElementById('admin-sub-sections');
+        const adminTitle = document.getElementById('admin-title');
+        const adminDescription = document.getElementById('admin-description'); 
+
+        // Admin Sub-sections
+        const manageCentersSection = document.getElementById('manage-centers-section');
+        const managePriestsSection = document.getElementById('manage-priests-section');
+        const manageUsersSection = document.getElementById('manage-users-section');
+        const monthlyScheduleSection = document.getElementById('monthly-schedule-section');
+        const dataExportSection = document.getElementById('data-export-section'); 
+
+        // Center Management Elements
+        const addCenterBtnList = document.getElementById('add-center-btn-list');
+        const centerTableBody = document.getElementById('center-table-body');
+        // Center Form Modal Elements
+        const centerFormModal = document.getElementById('center-form-modal');
+        const centerFormTitle = document.getElementById('center-form-title');
+        const centerNameInput = document.getElementById('center-name');
+        const centerLocationInput = document.getElementById('center-location');
+        const centerWeekdayTimeInput = document.getElementById('center-weekday-time');
+        // FIX: Removed incorrect assignment to 'document'
+        const centerWeekendTimeInput = document.getElementById('center-weekend-time');
+        const centerNotesTextarea = document.getElementById('center-notes');
+        const saveCenterBtn = document.getElementById('save-center-btn');
+        let editingCenterId = null;
+
+        // Priest Management Elements
+        const addPriestBtnList = document.getElementById('add-priest-btn-list');
+        const priestTableBody = document.getElementById('priest-table-body');
+        // Priest Form Modal Elements
+        const priestFormModal = document.getElementById('priest-form-modal');
+        const priestFormTitle = document.getElementById('priest-form-title');
+        const priestNameInput = document.getElementById('priest-name');
+        const priestEmailInput = document.getElementById('priest-email'); 
+        const priestPhoneInput = document.getElementById('priest-phone');
+        const savePriestBtn = document.getElementById('save-priest-btn');
+        let editingPriestId = null;
+
+        // User Management Elements
+        const addUserBtnList = document.getElementById('add-user-btn-list');
+        const userTableBody = document.getElementById('user-table-body');
+        // User Form Modal Elements
+        const userFormModal = document.getElementById('user-form-modal');
+        const userFormTitle = document.getElementById('user-form-title');
+        const userNameInput = document.getElementById('user-name');
+        const userEmailInput = document.getElementById('user-email');
+        const userPasswordInput = document.getElementById('user-password');
+        const userRoleSelect = document.getElementById('user-role');
+        const userCenterField = document.getElementById('user-center-field');
+        const userAssignedCenterSelect = document.getElementById('user-assigned-center');
+        const saveUserBtn = document.getElementById('save-user-btn');
+        let editingUserId = null;
+
+
+        // Schedule Management Elements (original ones)
+        const scheduleGrid = document.getElementById('schedule-grid');
+        const prevWeekBtn = document.getElementById('prev-week-btn');
+        const nextWeekBtn = document.getElementById('next-week-btn');
+        const weekDisplay = document.getElementById('week-display');
+        const userIdDisplay = document.getElementById('user-id');
+        const userRoleDisplay = document.getElementById('user-role-display'); 
+        const printScheduleBtn = document.getElementById('print-schedule-btn'); 
+
+        // Priest Contact Modal elements
+        const priestContactModal = document.getElementById('priest-contact-modal');
+        const priestContactName = document.getElementById('priest-contact-name');
+        const contactPhone = document.getElementById('contact-phone');
+        const contactWhatsapp = document.getElementById('contact-whatsapp');
+        const contactEmail = document.getElementById('contact-email');
+
+        // New CSV Data Export/Import Elements
+        const exportCentersBtn = document.getElementById('export-centers-btn');
+        const importCentersFile = document.getElementById('import-centers-file');
+        const importCentersFileName = document.getElementById('import-centers-file-name');
+        const importCentersBtn = document.getElementById('import-centers-btn');
+
+        const exportPriestsBtn = document.getElementById('export-priests-btn');
+        const importPriestsFile = document.getElementById('import-priests-file');
+        const importPriestsFileName = document.getElementById('import-priests-file-name');
+        const importPriestsBtn = document.getElementById('import-priests-btn');
+
+        const exportUsersBtn = document.getElementById('export-users-btn');
+        const importUsersFile = document.getElementById('import-users-file');
+        const importUsersFileName = document.getElementById('import-users-file-name');
+        const importUsersBtn = document.getElementById('import-users-btn');
+
+        const exportScheduleBtn = document.getElementById('export-schedule-btn');
+        const importScheduleFile = document.getElementById('import-schedule-file');
+        const importScheduleFileName = document.getElementById('import-schedule-file-name');
+        const importScheduleBtn = document.getElementById('import-schedule-btn');
+
+
+        // --- AUTENTICACIÓN ---
+        // Attaching the event listener for login outside onAuthStateChanged
+        // to ensure it's always active when the login form is visible.
+        loginBtn.onclick = handleLogin;
+        logoutBtn.onclick = handleLogout;
+        // Mini-calendar month navigation
+        prevMonthBtn.onclick = () => changeMonth(-1);
+        nextMonthBtn.onclick = () => changeMonth(1);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                userIdDisplay.textContent = currentUserId;
+                console.log("Auth State Changed: User detected, UID:", user.uid);
+                
+                // Fetch user profile from Firestore
+                const userProfileDocRef = doc(getCollectionRef('users_profiles'), user.uid);
+                const userProfileSnap = await getDoc(userProfileDocRef);
+
+                if (userProfileSnap.exists()) {
+                    const profileData = userProfileSnap.data();
+                    currentUserRole = profileData.role || 'Sacerdote'; // Default role if not set
+                    currentUserAssignedCenterId = profileData.assignedCenterId || null;
+                    console.log("Profile found. Role:", currentUserRole, "Assigned Center:", currentUserAssignedCenterId);
+                } else {
+                    console.warn("User profile not found in Firestore for UID:", user.uid);
+                    // If profile doesn't exist, assume a default role (e.g., Sacerdote)
+                    currentUserRole = 'Sacerdote'; // Default for new anonymous or unprofiled users
+                    currentUserAssignedCenterId = null;
+                    console.log("No profile found. Defaulting role to:", currentUserRole);
+
+                    // If it's a new authenticated user without a profile, try to create one
+                    try {
+                        await setDoc(userProfileDocRef, { 
+                            name: user.email || 'Usuario Nuevo',
+                            email: user.email || 'N/A',
+                            role: currentUserRole,
+                            assignedCenterId: currentUserAssignedCenterId
+                        }, { merge: true });
+                        console.log("Created default profile for new user:", user.uid);
+                    } catch (profileError) {
+                        console.error("Error creating default profile:", profileError);
+                    }
+                }
+                userRoleDisplay.textContent = currentUserRole; // Display user role
+
+                isAuthReady = true;
+                hideLoginForm(); // Hide login form
+                appContainer.classList.remove('hidden'); // Show main app container
+                initializeAppLogic(); // Initialize app logic
+            } else {
+                console.log("Auth State Changed: No user detected (logged out or not authenticated).");
+                // User logged out or not authenticated
+                currentUserId = null;
+                currentUserRole = null;
+                currentUserAssignedCenterId = null;
+                userIdDisplay.textContent = 'No autenticado';
+                userRoleDisplay.textContent = 'N/A';
+                isAuthReady = false;
+                showLoginForm(); // Show login form
+                appContainer.classList.add('hidden'); // Hide main app container
+                mainContent.classList.add('hidden'); // Ensure main content is hidden
+                loadingIndicator.classList.add('hidden'); // Ensure loading is hidden
+            }
+        });
+
+        async function handleLogin() {
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+
+            console.log("Intentando iniciar sesión con:", email);
+
+            if (!email || !password) {
+                showCustomAlert("Por favor, introduce email y contraseña."); // Replaced alert
+                return;
+            }
+
+            try {
+                loadingIndicator.classList.remove('hidden'); // Show loading
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log("Inicio de sesión exitoso!");
+                // onAuthStateChanged will handle hiding the form and initializing the app
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error);
+                showCustomAlert(`Error al iniciar sesión: ${error.message}`); // Replaced alert
+            } finally {
+                loadingIndicator.classList.add('hidden'); // Hide loading
+            }
+        }
+
+        async function handleLogout() {
+            console.log("Cerrando sesión...");
+            try {
+                loadingIndicator.classList.remove('hidden'); // Show loading
+                await signOut(auth);
+                console.log("Sesión cerrada exitosamente.");
+                // onAuthStateChanged will handle showing the login form
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                showCustomAlert(`Error al cerrar sesión: ${error.message}`); // Replaced alert
+            } finally {
+                loadingIndicator.classList.add('hidden'); // Hide loading
+            }
+        }
+
+        function showLoginForm() {
+            loginView.classList.remove('hidden');
+        }
+
+        function hideLoginForm() {
+            loginView.classList.add('hidden');
+        }
+
+        // --- LÓGICA DE LA APLICACIÓN ---
+        function initializeAppLogic() {
+            if (!isAuthReady || !currentUserId) return;
+            
+            console.log("initializeAppLogic: Firebase Auth is ready and user is authenticated. Role:", currentUserRole);
+            loadingIndicator.style.display = 'none';
+            mainContent.style.display = 'block';
+
+            // Attach event listeners for main navigation and admin sections.
+            // These need to be re-evaluated each time a user logs in (or role changes)
+            // because permissions for admin sections depend on currentUserRole.
+            attachDynamicEventListenersBasedOnRole();
+            
+            subscribeToDataChanges(); // Subscribe to data that both views need
+            showView(currentView); // Show the initial view
+        }
+
+        function attachDynamicEventListenersBasedOnRole() {
+            console.log("Attaching dynamic event listeners based on role. Current role:", currentUserRole);
+            // Main Navigation buttons - always clickable
+            homeNavBtn.onclick = () => showView('home');
+            adminNavBtn.onclick = () => showView('admin');
+            backToAdminPanelBtn.onclick = () => showAdminSubSection('main');
+
+            // Admin Main Panel Navigation - conditionally attach/re-attach
+            document.querySelectorAll('#admin-main-panel > div').forEach(card => {
+                const section = card.dataset.adminSection;
+                // Always clear previous click handlers and visual states
+                card.onclick = null;
+                card.classList.remove('opacity-50', 'cursor-not-allowed'); 
+
+                if (currentUserRole === 'Administrador') {
+                    console.log(`Admin: Enabling card for section: ${section}`);
+                    card.onclick = (e) => {
+                        const sec = e.currentTarget.dataset.adminSection;
+                        showAdminSubSection(sec);
+                    };
+                } else if (currentUserRole === 'Sacerdote') {
+                    // Priests only get access to the schedule section
+                    if (section === 'schedule') {
+                        console.log(`Sacerdote: Enabling schedule card.`);
+                        card.onclick = (e) => {
+                            const sec = e.currentTarget.dataset.adminSection;
+                            showAdminSubSection(sec);
+                        };
+                    } else {
+                        // All other sections are disabled for priests
+                        console.log(`Sacerdote: Disabling card for section: ${section}`);
+                        card.classList.add('opacity-50', 'cursor-not-allowed');
+                        card.onclick = () => showCustomAlert("No tienes permisos para acceder a esta sección."); // Replaced alert
+                    }
+                } else { // For 'Centro' users or any other unhandled role
+                    console.log(`Non-Admin/Sacerdote role (${currentUserRole}): Disabling card for section: ${section}`);
+                    card.classList.add('opacity-50', 'cursor-not-allowed');
+                    card.onclick = () => showCustomAlert("No tienes permisos para acceder a esta sección."); // Replaced alert
+                }
+            });
+
+            // Admin Sub-section Specific Event Listeners (only attach if Admin)
+            if (currentUserRole === 'Administrador') {
+                addCenterBtnList.onclick = () => openCenterModal();
+                saveCenterBtn.onclick = saveCenter;
+
+                addPriestBtnList.onclick = () => openPriestModal();
+                savePriestBtn.onclick = savePriest;
+
+                addUserBtnList.onclick = () => openUserModal();
+                saveUserBtn.onclick = saveUser;
+                userRoleSelect.onchange = () => {
+                    if (userRoleSelect.value === 'Centro') {
+                        userCenterField.classList.remove('hidden');
+                        populateCenterSelectForUsers();
+                    } else {
+                        userCenterField.classList.add('hidden');
+                    }
+                };
+
+                // New: Data Export/Import Event Listeners
+                exportCentersBtn.onclick = exportCentersToCsv;
+                importCentersFile.onchange = (e) => handleFileSelection(e, importCentersFileName, importCentersBtn);
+                importCentersBtn.onclick = () => importDataFromCsv(importCentersFile, importCentersFileName, importCentersBtn, 'centers');
+
+                exportPriestsBtn.onclick = exportPriestsToCsv;
+                importPriestsFile.onchange = (e) => handleFileSelection(e, importPriestsFileName, importPriestsBtn);
+                importPriestsBtn.onclick = () => importDataFromCsv(importPriestsFile, importPriestsFileName, importPriestsBtn, 'priests');
+
+                exportUsersBtn.onclick = exportUsersToCsv;
+                importUsersFile.onchange = (e) => handleFileSelection(e, importUsersFileName, importUsersBtn);
+                importUsersBtn.onclick = () => importDataFromCsv(importUsersFile, importUsersFileName, importUsersBtn, 'users_profiles');
+
+                exportScheduleBtn.onclick = exportScheduleToCsv;
+                importScheduleFile.onchange = (e) => handleFileSelection(e, importScheduleFileName, importScheduleBtn);
+                importScheduleBtn.onclick = () => importDataFromCsv(importScheduleFile, importScheduleFileName, importScheduleBtn, 'schedule');
+
+
+            } else {
+                // For non-admin, ensure these buttons are disabled or do nothing if clicked directly
+                // (though they should be hidden by CSS if not in admin view, but good for robustness)
+                addCenterBtnList.onclick = () => showCustomAlert("No tienes permisos para añadir centros.");
+                saveCenterBtn.onclick = () => showCustomAlert("No tienes permisos para guardar centros.");
+                addPriestBtnList.onclick = () => showCustomAlert("No tienes permisos para añadir sacerdotes.");
+                savePriestBtn.onclick = () => showCustomAlert("No tienes permisos para guardar sacerdotes.");
+                addUserBtnList.onclick = () => showCustomAlert("No tienes permisos para añadir usuarios.");
+                saveUserBtn.onclick = () => showCustomAlert("No tienes permisos para guardar usuarios.");
+
+                // Disable CSV buttons for non-admins
+                exportCentersBtn.disabled = true;
+                importCentersFile.disabled = true;
+                importCentersBtn.disabled = true;
+                exportPriestsBtn.disabled = true;
+                importPriestsFile.disabled = true;
+                importPriestsBtn.disabled = true;
+                exportUsersBtn.disabled = true;
+                importUsersFile.disabled = true;
+                importUsersBtn.disabled = true;
+                exportScheduleBtn.disabled = true;
+                importScheduleFile.disabled = true;
+                importScheduleBtn.disabled = true;
+            }
+
+            // Schedule buttons are always clickable for both Admin and Sacerdote if they are in the schedule section
+            // These event listeners are attached in the DOMContentLoaded listener and do not need dynamic re-attachment here.
+            // The access to the schedule section itself is controlled by showView and showAdminSubSection.
+        }
+
+
+        function showView(view) {
+            console.log(`Attempting to show view: ${view}. Current role: ${currentUserRole}`);
+            currentView = view;
+            if (view === 'home') {
+                homeView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                homeNavBtn.classList.add('bg-blue-600', 'text-white');
+                homeNavBtn.classList.remove('bg-gray-200', 'text-gray-800');
+                adminNavBtn.classList.remove('bg-blue-600', 'text-white');
+                adminNavBtn.classList.add('bg-gray-200', 'text-gray-800');
+                renderHomePage();
+            } else { // admin
+                // Restrict admin view access based on role
+                if (currentUserRole === 'Administrador') {
+                    console.log("Showing admin view for Administrador.");
+                    homeView.classList.add('hidden');
+                    adminView.classList.remove('hidden');
+                    adminNavBtn.classList.add('bg-blue-600', 'text-white');
+                    adminNavBtn.classList.remove('bg-gray-200', 'text-gray-800');
+                    homeNavBtn.classList.remove('bg-blue-600', 'text-white');
+                    homeNavBtn.classList.add('bg-gray-200', 'text-gray-800');
+                    showAdminSubSection('main'); // Admin goes to main admin panel
+                } else if (currentUserRole === 'Sacerdote') {
+                    console.log("Showing admin view for Sacerdote (restricted to schedule).");
+                    homeView.classList.add('hidden');
+                    adminView.classList.remove('hidden');
+                    adminNavBtn.classList.add('bg-blue-600', 'text-white');
+                    adminNavBtn.classList.remove('bg-gray-200', 'text-gray-800');
+                    homeNavBtn.classList.remove('bg-blue-600', 'text-white');
+                    homeNavBtn.classList.add('bg-gray-200', 'text-gray-800');
+                    // Sacerdote can see admin panel but restricted to schedule only
+                    showAdminSubSection('schedule'); 
+                } else { // Centro user or unauthenticated
+                    console.log(`Access denied for role: ${currentUserRole}. Redirecting to home.`);
+                    showCustomAlert("No tienes permisos para acceder a esta sección.");
+                    showView('home'); // Redirect to home
+                }
+            }
+        }
+
+        function showAdminSubSection(section) {
+            console.log("Attempting to show admin sub-section:", section, "Current User Role:", currentUserRole);
+            currentAdminSubSection = section;
+            // Ensure all elements are correctly initialized before accessing classList
+            // This is crucial for preventing "Cannot read properties of null (reading 'classList')"
+            if (adminMainPanel) adminMainPanel.classList.add('hidden');
+            if (adminSubSections) adminSubSections.classList.add('hidden');
+            if (manageCentersSection) manageCentersSection.classList.add('hidden');
+            if (managePriestsSection) managePriestsSection.classList.add('hidden');
+            if (manageUsersSection) manageUsersSection.classList.add('hidden');
+            if (monthlyScheduleSection) monthlyScheduleSection.classList.add('hidden');
+            if (dataExportSection) dataExportSection.classList.add('hidden'); 
+
+            if (adminTitle) adminTitle.classList.remove('hidden');
+            if (adminDescription) adminDescription.classList.remove('hidden');
+            if (backToAdminPanelBtn) backToAdminPanelBtn.classList.add('hidden'); 
+
+            // Apply specific restrictions for Sacerdote and Centro users
+            if (currentUserRole === 'Sacerdote') {
+                console.log("User is Sacerdote. Applying restrictions within sub-section navigation.");
+                // Sacerdote can only access 'schedule' or 'main' (which redirects to schedule)
+                if (section !== 'schedule' && section !== 'main') {
+                    showCustomAlert("No tienes permisos para acceder a esta sección.");
+                    console.log("Sacerdote tried to access restricted section. Redirecting to schedule.");
+                    showAdminSubSection('schedule'); // Redirect to schedule if attempted other section
+                    return;
+                }
+            } else if (currentUserRole === 'Centro') {
+                console.log("User is Centro. Applying restrictions within sub-section navigation.");
+                showCustomAlert("No tienes permisos para acceder a esta sección.");
+                console.log("Centro user tried to access admin. Redirecting to home.");
+                showView('home'); // Centro users are redirected to home
+                return;
+            } else if (currentUserRole === 'Administrador') {
+                console.log("User is Administrador. Allowing full access within sub-section navigation.");
+                // No specific early returns or restrictions here for Admin.
+            }
+
+
+			switch (section) {
+			    case 'main':
+			        console.log("Navigating to main admin panel.");
+			        // Muestro panel principal
+			        if (adminMainPanel)      adminMainPanel.classList.remove('hidden');
+			        // Oculto subsecciones
+			        if (adminSubSections)    adminSubSections.classList.add('hidden');
+			        // Título y descripción genéricos
+			        if (adminTitle)          adminTitle.textContent = 'Panel de Administración';
+			        if (adminDescription) {
+			            adminDescription.textContent = 'Bienvenido al panel de administración. Desde aquí puedes gestionar los diferentes aspectos de la aplicación.';
+			            adminDescription.classList.remove('hidden');
+			        }
+			        // Oculto botón de volver
+			        if (backToAdminPanelBtn) backToAdminPanelBtn.classList.add('hidden');
+			        break;
+
+			    case 'centers':
+			        console.log("Navigating to manage centers.");
+			        // oculto panel principal
+			        if (adminMainPanel)      adminMainPanel.classList.add('hidden');
+			        // muestro subsecciones
+			        if (adminSubSections)    adminSubSections.classList.remove('hidden');
+			        // muestro sección específica
+			        if (manageCentersSection) manageCentersSection.classList.remove('hidden');
+			        // actualizo cabecera
+			        if (adminTitle)          adminTitle.textContent = 'Gestionar Centros';
+			        if (adminDescription)    adminDescription.classList.add('hidden');
+			        if (backToAdminPanelBtn) backToAdminPanelBtn.classList.remove('hidden');
+			        renderCenterList();
+			        break;
+
+			    case 'priests':
+			        console.log("Navigating to manage priests.");
+			        if (adminMainPanel)      adminMainPanel.classList.add('hidden');
+			        if (adminSubSections)    adminSubSections.classList.remove('hidden');
+			        if (managePriestsSection) managePriestsSection.classList.remove('hidden');
+			        if (adminTitle)          adminTitle.textContent = 'Gestionar Sacerdotes';
+			        if (adminDescription)    adminDescription.classList.add('hidden');
+			        if (backToAdminPanelBtn) backToAdminPanelBtn.classList.remove('hidden');
+			        renderPriestList();
+			        break;
+
+			    case 'users':
+			        console.log("Navigating to manage users.");
+			        if (adminMainPanel)      adminMainPanel.classList.add('hidden');
+			        if (adminSubSections)    adminSubSections.classList.remove('hidden');
+			        if (manageUsersSection)  manageUsersSection.classList.remove('hidden');
+			        if (adminTitle)          adminTitle.textContent = 'Gestionar Usuarios';
+			        if (adminDescription)    adminDescription.classList.add('hidden');
+			        if (backToAdminPanelBtn) backToAdminPanelBtn.classList.remove('hidden');
+			        renderUserList();
+			        break;
+
+			    case 'schedule':
+			        console.log("Navigating to monthly schedule.");
+			        if (adminMainPanel)         adminMainPanel.classList.add('hidden');
+			        if (adminSubSections)       adminSubSections.classList.remove('hidden');
+			        if (monthlyScheduleSection) monthlyScheduleSection.classList.remove('hidden');
+			        if (adminTitle)             adminTitle.textContent = 'Calendario de Misas Mensual';
+			        if (adminDescription)       adminDescription.classList.add('hidden');
+			        if (backToAdminPanelBtn)    backToAdminPanelBtn.classList.remove('hidden');
+			        renderAdminPage();
+			        break;
+
+			    case 'data-export':
+			        console.log("Navigating to data export.");
+			        if (adminMainPanel)      adminMainPanel.classList.add('hidden');
+			        if (adminSubSections)    adminSubSections.classList.remove('hidden');
+			        if (dataExportSection)   dataExportSection.classList.remove('hidden');
+			        if (adminTitle)          adminTitle.textContent = 'Gestión de Datos (CSV)';
+			        if (adminDescription)    adminDescription.classList.add('hidden');
+			        if (backToAdminPanelBtn) backToAdminPanelBtn.classList.remove('hidden');
+			        break;
+			}
+        }
+
+
+        // --- MANEJO DE DATOS (FIRESTORE) ---
+        
+        function getCollectionRef(collectionName) {
+             return collection(db, `artifacts/${appId}/public/data/${collectionName}`);
+        }
+
+        function subscribeToDataChanges() {
+            unsubscribes.forEach(unsub => unsub());
+            unsubscribes = [];
+
+            // Listen for priests
+            const priestsQuery = query(getCollectionRef('priests'));
+            const unsubPriests = onSnapshot(priestsQuery, (snapshot) => {
+                priests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPriestList();
+                renderScheduleGrid(); 
+                renderHomePage(); 
+            }, error => console.error("Error al suscribirse a sacerdotes:", error));
+            unsubscribes.push(unsubPriests);
+
+            // Listen for centers
+            const centersQuery = query(getCollectionRef('centers'));
+            const unsubCenters = onSnapshot(centersQuery, (snapshot) => {
+                centers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderCenterList();
+                renderScheduleGrid();
+                renderHomePage();
+                populateCenterSelectForUsers(); // Update center select in user modal
+            }, error => console.error("Error al suscribirse a centros:", error));
+            unsubscribes.push(unsubCenters);
+
+            // Listen for users (profiles)
+            const usersQuery = query(getCollectionRef('users_profiles')); // New collection for user profiles
+            const unsubUsers = onSnapshot(usersQuery, (snapshot) => {
+                users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderUserList();
+            }, error => console.error("Error al suscribirse a usuarios:", error));
+            unsubscribes.push(unsubUsers);
+            
+            // Listen for schedule data for the current week (Admin view)
+            const weekDates = getWeekDays(currentDate).map(d => formatDate(d));
+            
+            // Clear existing schedule data to re-populate from current snapshot
+            schedule = {}; 
+            
+            weekDates.forEach(dateStr => {
+                const scheduleDocRef = doc(getCollectionRef('schedule'), dateStr);
+                const unsubDoc = onSnapshot(scheduleDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const convertedData = {};
+                        for (const centerId in data) {
+                            if (typeof data[centerId] === 'string') { // Old format: just priestId string
+                                convertedData[centerId] = {
+                                    priestId: data[centerId],
+                                    massTime: '', // Initialize with empty string, default will be used if not set
+                                    notes: '' // Initialize new notes field
+                                };
+                            } else { // New format: { priestId, massTime, notes }
+                                convertedData[centerId] = {
+                                    priestId: data[centerId].priestId || '', 
+                                    massTime: data[centerId].massTime || '',
+                                    notes: data[centerId].notes || '' // Ensure notes are read
+                                };
+                            }
+                        }
+                        schedule[dateStr] = convertedData;
+                    } else {
+                        schedule[dateStr] = {};
+                    }
+                    renderScheduleGrid();
+                    renderTodayMasses(); // Also update home view when admin schedule changes
+                    renderWeekMasses(); // Also update home view when admin schedule changes
+                }, error => console.error(`Error al suscribirse al horario de ${dateStr}:`, error));
+                unsubscribes.push(unsubDoc);
+            });
+
+            // Listen for schedule data for the current month in home view (for calendar and print)
+            const monthDates = getMonthDates(homeCalendarDate).map(d => formatDate(d));
+            monthDates.forEach(dateStr => {
+                const scheduleDocRef = doc(getCollectionRef('schedule'), dateStr);
+                const unsubDoc = onSnapshot(scheduleDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const convertedData = {};
+                        for (const centerId in data) {
+                            if (typeof data[centerId] === 'string') {
+                                convertedData[centerId] = {
+                                    priestId: data[centerId],
+                                    massTime: '',
+                                    notes: '' // Initialize new notes field
+                                };
+                            } else {
+                                convertedData[centerId] = {
+                                    priestId: data[centerId].priestId || '',
+                                    massTime: data[centerId].massTime || '',
+                                    notes: data[centerId].notes || '' // Ensure notes are read
+                                };
+                            }
+                        }
+                        // Merge with existing schedule data to prevent overwriting if also subscribed by admin view
+                        schedule[dateStr] = { ...schedule[dateStr], ...convertedData }; 
+                    } else {
+                        schedule[dateStr] = {};
+                    }
+                    renderMiniCalendar();
+                    renderTodayMasses();
+                    renderWeekMasses();
+                }, error => console.error(`Error al suscribirse al horario de ${dateStr}:`, error));
+                unsubscribes.push(unsubDoc);
+            });
+        }
+
+        // General function to close any modal
+        // Moved to window object for global accessibility from inline onclick
+        window.closeModal = function(modalId) { 
+            console.log('Closing modal:', modalId); // Added log for debugging
+            document.getElementById(modalId).classList.add('hidden');
+            // Reset editing ID when closing modal
+            editingCenterId = null; 
+            editingPriestId = null;
+            editingUserId = null;
+        }
+
+        // Custom alert function
+        function showCustomAlert(message) {
+            const confirmModal = document.getElementById('custom-confirm-modal');
+            document.getElementById('confirm-modal-text').textContent = message;
+            document.getElementById('confirm-modal-yes').classList.add('hidden'); // Hide Yes button for alert
+            document.getElementById('confirm-modal-no').textContent = 'Cerrar'; // Change No button to Close
+            confirmModal.classList.remove('hidden');
+
+            return new Promise(resolve => {
+                const closeBtn = document.getElementById('confirm-modal-no');
+                const closeHandler = () => {
+                    confirmModal.classList.add('hidden');
+                    closeBtn.removeEventListener('click', closeHandler);
+                    resolve(false); // For alert, always resolve false (or true, depending on desired behavior for alert)
+                };
+                closeBtn.addEventListener('click', closeHandler);
+            });
+        }
+
+        // Custom confirm dialog function
+        function showConfirmDialog(message) {
+            const confirmModal = document.getElementById('custom-confirm-modal');
+            document.getElementById('confirm-modal-text').textContent = message;
+            document.getElementById('confirm-modal-yes').classList.remove('hidden'); // Show Yes button for confirm
+            document.getElementById('confirm-modal-no').textContent = 'No'; // Reset No button text
+            confirmModal.classList.remove('hidden');
+
+            return new Promise(resolve => {
+                const yesBtn = document.getElementById('confirm-modal-yes');
+                const noBtn = document.getElementById('confirm-modal-no');
+
+                const yesHandler = () => {
+                    confirmModal.classList.add('hidden');
+                    yesBtn.removeEventListener('click', yesHandler);
+                    noBtn.removeEventListener('click', noHandler);
+                    resolve(true);
+                };
+                const noHandler = () => {
+                    confirmModal.classList.add('hidden');
+                    yesBtn.removeEventListener('click', yesHandler);
+                    noBtn.removeEventListener('click', noHandler);
+                    resolve(false);
+                };
+
+                yesBtn.addEventListener('click', yesHandler);
+                noBtn.addEventListener('click', noBtn); // Fixed: was noBtn.addEventListener('click', noHandler);
+            });
+        }
+
+
+        // --- CRUD Operations ---
+
+        // Centers
+        async function openCenterModal(center = null) {
+            // Only admin can open this modal
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            centerFormModal.classList.remove('hidden');
+            if (center) {
+                editingCenterId = center.id;
+                centerFormTitle.textContent = 'Editar Centro';
+                centerNameInput.value = center.name || '';
+                centerLocationInput.value = center.location || '';
+                centerWeekdayTimeInput.value = center.weekdayMassTime || '';
+                centerWeekendTimeInput.value = center.weekendMassTime || '';
+                centerNotesTextarea.value = center.notes || '';
+            } else {
+                editingCenterId = null;
+                centerFormTitle.textContent = 'Añadir Centro';
+                centerNameInput.value = '';
+                centerLocationInput.value = '';
+                centerWeekdayTimeInput.value = '';
+                centerWeekendTimeInput.value = '';
+                centerNotesTextarea.value = '';
+            }
+        }
+
+        async function saveCenter() {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            const name = centerNameInput.value.trim();
+            const location = centerLocationInput.value.trim();
+            const weekdayMassTime = centerWeekdayTimeInput.value.trim();
+            const weekendMassTime = centerWeekendTimeInput.value.trim();
+            const notes = centerNotesTextarea.value.trim();
+
+            if (name) {
+                try {
+                    const centerData = { name, location, weekdayMassTime, weekendMassTime, notes };
+                    if (editingCenterId) {
+                        await setDoc(doc(getCollectionRef('centers'), editingCenterId), centerData, { merge: true });
+                    } else {
+                        await addDoc(getCollectionRef('centers'), centerData);
+                    }
+                    window.closeModal('center-form-modal'); // Use window.closeModal
+                }
+                catch (error) {
+                    console.error("Error al guardar centro: ", error);
+                }
+            } else {
+                    showCustomAlert("El nombre del centro no puede estar vacío.");
+            }
+        }
+
+        // Priests
+        async function openPriestModal(priest = null) {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            priestFormModal.classList.remove('hidden');
+            if (priest) {
+                editingPriestId = priest.id;
+                priestFormTitle.textContent = 'Editar Sacerdote';
+                priestNameInput.value = priest.name || '';
+                priestEmailInput.value = priest.email || ''; // Populate new email field
+                priestPhoneInput.value = priest.phone || '';
+            } else {
+                editingPriestId = null;
+                priestFormTitle.textContent = 'Añadir Sacerdote';
+                priestNameInput.value = '';
+                priestEmailInput.value = ''; // Clear new email field
+                priestPhoneInput.value = '';
+            }
+        }
+
+        async function savePriest() {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            const name = priestNameInput.value.trim();
+            const email = priestEmailInput.value.trim(); // Get email from input
+            const phone = priestPhoneInput.value.trim();
+
+            if (name) {
+                try {
+                    const priestData = { name, email, phone }; // Include email in data
+                    if (editingPriestId) {
+                        await setDoc(doc(getCollectionRef('priests'), editingPriestId), priestData, { merge: true });
+                    } else {
+                        await addDoc(getCollectionRef('priests'), priestData);
+                    }
+                    window.closeModal('priest-form-modal'); // Use window.closeModal
+                } catch (error) {
+                    console.error("Error al guardar sacerdote: ", error);
+                }
+            } else {
+                showCustomAlert("El nombre del sacerdote no puede estar vacío.");
+            }
+        }
+
+        // Users
+        async function openUserModal(user = null) {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            userFormModal.classList.remove('hidden');
+            populateCenterSelectForUsers(); // Ensure centers are loaded for the select
+            if (user) {
+                editingUserId = user.id;
+                userFormTitle.textContent = 'Editar Usuario';
+                userNameInput.value = user.name || '';
+                userEmailInput.value = user.email || '';
+                userEmailInput.disabled = true; // Email usually not editable for existing users
+                userPasswordInput.value = ''; // Password should not be pre-filled for security
+                userRoleSelect.value = user.role || 'Sacerdote';
+                
+                if (user.role === 'Centro') {
+                    userCenterField.classList.remove('hidden');
+                    userAssignedCenterSelect.value = user.assignedCenterId || '';
+                } else {
+                    userCenterField.classList.add('hidden');
+                }
+            } else {
+                editingUserId = null;
+                userFormTitle.textContent = 'Añadir Usuario';
+                userNameInput.value = '';
+                userEmailInput.value = '';
+                userEmailInput.disabled = false;
+                userPasswordInput.value = '';
+                userRoleSelect.value = 'Sacerdote'; // Default role
+                userCenterField.classList.add('hidden'); // Hide center field by default
+                userAssignedCenterSelect.value = '';
+            }
+        }
+
+        async function saveUser() {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            const name = userNameInput.value.trim();
+            const email = userEmailInput.value.trim();
+            const password = userPasswordInput.value.trim(); // This password is not used for Firebase Auth client-side creation
+            const role = userRoleSelect.value;
+            const assignedCenterId = userRoleSelect.value === 'Centro' ? userAssignedCenterSelect.value : '';
+
+            if (!name || !email) {
+                showCustomAlert("Nombre y Email son obligatorios.");
+                return;
+            }
+            // For demo purposes, we only check password for new users, but actual Firebase Auth user creation is external.
+            if (!editingUserId && !password) {
+                showCustomAlert("La contraseña es obligatoria para nuevos usuarios (solo para referencia, no para autenticación).");
+                // In a real app, you'd manage Firebase Auth user creation securely on a backend.
+                return;
+            }
+            if (password && password.length < 6) {
+                showCustomAlert("La contraseña debe tener al menos 6 caracteres (solo para referencia).");
+                return;
+            }
+
+            try {
+                const userData = { name, email, role };
+                if (assignedCenterId) {
+                    userData.assignedCenterId = assignedCenterId;
+                }
+
+                if (editingUserId) {
+                    // Update existing user profile in Firestore
+                    await setDoc(doc(getCollectionRef('users_profiles'), editingUserId), userData, { merge: true });
+                } else {
+                    // Check if email already exists in users_profiles
+                    const existingUser = users.find(u => u.email === email);
+                    if (existingUser) {
+                        showCustomAlert("El email ya existe en los perfiles de usuario. Por favor, usa otro email.");
+                        return;
+                    }
+                    // For new users, we will use their Firebase Auth UID as the document ID
+                    // This assumes a Firebase Auth user already exists for this email.
+                    // For this demo, we'll save it without an existing Auth UID check.
+                    // In a real app, you'd get the actual user.uid after Firebase Auth creation.
+                    // For simplicity, for *new* users added here, we'll use a dummy ID for now,
+                    // or assume the UID will be set during actual auth setup in console.
+                    // A better approach for adding new users via admin UI would involve Firebase Admin SDK on backend.
+                    // For now, if editingUserId === null, we assume it's linked to the logged-in user's UID (if it's an admin creating their own profile initially),
+                    // or a new random ID for dummy users (which is not good for linking to Firebase Auth).
+                    // Best practice: Admin creates user in Firebase Auth, gets UID, then creates profile with that UID.
+                    // To simplify for this demo, let's create a profile with a random UUID if no editingUserId.
+                    const newProfileId = editingUserId || crypto.randomUUID(); 
+                    await setDoc(doc(getCollectionRef('users_profiles'), newProfileId), userData, { merge: true });
+                    showCustomAlert(`Perfil de usuario creado (ID: ${newProfileId}). En un entorno real, vincularías esto a un usuario de Firebase Auth.`);
+                }
+                window.closeModal('user-form-modal'); // Use window.closeModal
+            } catch (error) {
+                console.error("Error al guardar usuario: ", error);
+                showCustomAlert("Error al guardar usuario: " + error.message);
+            }
+        }
+
+
+        function populateCenterSelectForUsers() {
+            userAssignedCenterSelect.innerHTML = '<option value="">-- Selecciona un Centro --</option>';
+            centers.forEach(center => {
+                const option = document.createElement('option');
+                option.value = center.id;
+                option.textContent = center.name;
+                userAssignedCenterSelect.appendChild(option);
+            });
+        }
+
+
+        // General confirmation dialog and delete
+        async function deleteItem(collectionName, docId) {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para realizar esta acción.");
+                return;
+            }
+            const confirmed = await showConfirmDialog('¿Estás seguro de que quieres eliminar este elemento?');
+            if (confirmed) {
+                try {
+                    await deleteDoc(doc(getCollectionRef(collectionName), docId));
+                } catch (error) {
+                    console.error("Error al eliminar:", error);
+                }
+            }
+        }
+
+        // Function to update individual assignment properties (priestId or massTime or notes)
+        async function updateScheduleAssignment(dateStr, centerId, key, value) {
+            // Only admin can update schedule
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para editar el horario.");
+                return;
+            }
+            try {
+                const scheduleDocRef = doc(getCollectionRef('schedule'), dateStr);
+                const currentDataForCenter = schedule[dateStr]?.[centerId] || {}; // Get existing object for this center
+                
+                let newAssignment = { ...currentDataForCenter };
+
+                if (key === 'priestId' && value === 'NO_MASS') {
+                    newAssignment = {
+                        priestId: 'NO_MASS', 
+                        massTime: '', // Clear mass time if 'No hay misa'
+                        notes: currentDataForCenter.notes || '' // Keep existing notes
+                    };
+                } else if (key === 'priestId' && currentDataForCenter.priestId === 'NO_MASS') {
+                     // If user selects a priest after 'No hay misa', restore default time or leave it blank
+                     const center = centers.find(c => c.id === centerId);
+                     const day = new Date(dateStr);
+                     newAssignment = {
+                         priestId: value,
+                         massTime: getDefaultMassTimeForDay(center, day) || '',
+                         notes: currentDataForCenter.notes || '' // Keep existing notes
+                     };
+                }
+                else {
+                    newAssignment[key] = value;
+                }
+
+                const newPayload = { [centerId]: newAssignment };
+                await setDoc(scheduleDocRef, newPayload, { merge: true });
+            } catch (error) {
+                console.error("Error al actualizar el horario: ", error);
+            }
+        }
+
+		function printSchedule() {
+		    // All users can print (view only)
+		    const monthDays = getMonthDates(homeCalendarDate); // Use homeCalendarDate for the month
+		    const year = homeCalendarDate.getFullYear();
+		    const monthNameText = monthName(homeCalendarDate);
+
+		    let printContent = `
+		        <h1 style="text-align: center; margin-bottom: 20px; font-size: 1.3em;">Calendario de Misas Mensual</h1>
+		        <h2 style="text-align: center; margin-bottom: 30px; font-size: 1.2em;">Mes de ${monthNameText} de ${year}</h2>
+		    `;
+
+		    // Start table with reduced font and padding inline as fallback
+		    printContent += `
+		        <table id="monthly-schedule" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+		            <thead>
+		                <tr>
+		                    <th style="border: 1px solid #ccc; padding: 4px; background-color: #f2f2f2; font-size:10px; white-space:nowrap;">Día</th>
+		    `;
+		    // Add center headers, filtered for 'Centro' role
+		    let centersToDisplay = centers;
+		    if (currentUserRole === 'Centro' && currentUserAssignedCenterId) {
+		        centersToDisplay = centers.filter(c => c.id === currentUserAssignedCenterId);
+		    }
+		    centersToDisplay.forEach(center => {
+		        printContent += `<th style="border: 1px solid #ccc; padding: 4px; background-color: #f2f2f2; font-size:10px; white-space:nowrap;">${center.name}</th>`;
+		    });
+		    printContent += `
+		                </tr>
+		            </thead>
+		            <tbody>
+		    `;
+
+		    // Add rows for each day
+		    monthDays.forEach(day => {
+		        const dateStr = formatDate(day);
+		        const daySchedule = schedule[dateStr] || {};
+		        const dayNumber = day.getDate();
+		        const dayOfWeekText = dayName(day);
+
+		        printContent += `
+		            <tr>
+		                <td style="border:1px solid #ccc; padding:4px; font-weight:bold; font-size:10px; white-space:nowrap;">${dayNumber} ${dayOfWeekText}</td>
+		        `;
+
+		        centersToDisplay.forEach(center => {
+		            const assignment = daySchedule[center.id] || {};
+		            const priest = priests.find(p => p.id === (assignment.priestId || ''));
+		            const time = assignment.massTime || getDefaultMassTimeForDay(center, day);
+		            const notes = assignment.notes || '';
+		            let cellContent = '';
+
+		            if (currentUserRole === 'Centro' && center.id !== currentUserAssignedCenterId) {
+		                cellContent = 'N/A';
+		            } else if (assignment.priestId === 'NO_MASS') {
+		                cellContent = `<span style="color:red;font-weight:bold;font-size:10px;white-space:nowrap;">No hay misa</span>`;
+		            } else if (priest && priest.name && time) {
+		                cellContent = `<span style="font-size:10px;white-space:nowrap;">${time} - ${priest.name}</span>`;
+		            } else if (time) {
+		                cellContent = `<span style="font-size:10px;white-space:nowrap;">${time} - Sin sacerdote</span>`;
+		            } else if (priest) {
+		                cellContent = `<span style="font-size:10px;white-space:nowrap;">Sin hora - ${priest.name}</span>`;
+		            } else {
+		                cellContent = `<span style="font-size:10px;white-space:nowrap;">Sin asignar</span>`;
+		            }
+		            if (notes && !(currentUserRole === 'Centro' && center.id !== currentUserAssignedCenterId)) {
+		                cellContent += `<br><span style="font-size:8px;font-style:italic;white-space:nowrap;">(${notes})</span>`;
+		            }
+		            printContent += `<td style="border:1px solid #ccc; padding:4px; font-size:10px; white-space:nowrap;">${cellContent}</td>`;
+		        });
+
+		        printContent += `</tr>`;
+		    });
+
+		    printContent += `
+		        </tbody>
+		    </table>
+		    `;
+
+		    const printWindow = window.open('', '_blank');
+		    if (printWindow) {
+		        printWindow.document.write(`
+		            <!DOCTYPE html>
+		            <html>
+		            <head>
+		                <title>Calendario de Misas Mensual</title>
+		                <style>
+		                    body { font-family: 'Inter', sans-serif; margin: 20px; color: #333; }
+		                    h1 { font-size: 1.5em; text-align: center; margin-bottom: 10px; }
+		                    h2 { font-size: 1.2em; text-align: center; margin-bottom: 20px; }
+		                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+		                    th, td { border:1px solid #ccc; padding:4px; vertical-align:top; font-size:10px; white-space:nowrap; }
+		                    th { background-color:#f2f2f2; font-weight:bold; text-align:center; }
+		                    @media print {
+		                        body { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+		                    }
+		                </style>
+		            </head>
+		            <body>
+		                ${printContent}
+		            </body>
+		            </html>
+		        `);
+		        printWindow.document.close();
+		        printWindow.focus();
+		        printWindow.print();
+		    } else {
+		        showCustomAlert('No se pudo abrir la ventana de impresión. Por favor, permite ventanas emergentes.');
+		    }
+		}
+
+
+
+        // --- RENDERIZADO DE LA UI (ADMIN VIEW Sub-sections) ---
+
+        function renderPriestList() {
+            const canEditDelete = currentUserRole === 'Administrador';
+            priestTableBody.innerHTML = priests.map(p => `
+                <tr class="hover:bg-gray-100">
+                    <td class="px-6 py-4 whitespace-nowrap">${p.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${p.email || 'N/A'}</td> <!-- Display new email field -->
+                    <td class="px-6 py-4 whitespace-nowrap">${p.phone || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        ${canEditDelete ? `
+                            <button data-id="${p.id}" class="edit-priest text-indigo-600 hover:text-indigo-900 mr-4">Editar</button>
+                            <button data-id="${p.id}" class="delete-priest text-red-600 hover:text-red-900">Eliminar</button>
+                        ` : '<span class="text-gray-400">Ver</span>'}
+                    </td>
+                </tr>
+            `).join('');
+            if (canEditDelete) {
+                document.querySelectorAll('.edit-priest').forEach(btn => {
+                    btn.onclick = (e) => {
+                        const priestId = e.currentTarget.dataset.id;
+                        const priest = priests.find(p => p.id === priestId);
+                        if (priest) openPriestModal(priest);
+                    };
+                });
+                document.querySelectorAll('.delete-priest').forEach(btn => {
+                    btn.onclick = (e) => deleteItem('priests', e.currentTarget.dataset.id);
+                });
+            }
+        }
+
+        function renderCenterList() {
+            const canEditDelete = currentUserRole === 'Administrador';
+            centerTableBody.innerHTML = centers.map(c => `
+                <tr class="hover:bg-gray-100">
+                    <td class="px-6 py-4 whitespace-nowrap">${c.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${c.location || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${c.weekdayMassTime || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${c.weekendMassTime || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        ${canEditDelete ? `
+                            <button data-id="${c.id}" class="edit-center text-indigo-600 hover:text-indigo-900 mr-4">Editar</button>
+                            <button data-id="${c.id}" class="delete-center text-red-600 hover:text-red-900">Eliminar</button>
+                        ` : '<span class="text-gray-400">Ver</span>'}
+                    </td>
+                </tr>
+            `).join('');
+            if (canEditDelete) {
+                document.querySelectorAll('.edit-center').forEach(btn => {
+                    btn.onclick = (e) => {
+                        const centerId = e.currentTarget.dataset.id;
+                        const center = centers.find(c => c.id === centerId);
+                        if (center) openCenterModal(center);
+                    };
+                });
+                document.querySelectorAll('.delete-center').forEach(btn => {
+                    btn.onclick = (e) => deleteItem('centers', e.currentTarget.dataset.id);
+                });
+            }
+        }
+
+        function renderUserList() {
+            const canEditDelete = currentUserRole === 'Administrador';
+            userTableBody.innerHTML = users.map(u => {
+                const assignedCenterName = u.assignedCenterId ? (centers.find(c => c.id === u.assignedCenterId)?.name || 'Desconocido') : 'N/A';
+                return `
+                    <tr class="hover:bg-gray-100">
+                        <td class="px-6 py-4 whitespace-nowrap">${u.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${u.email}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${u.role || 'Sacerdote'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${assignedCenterName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            ${canEditDelete ? `
+                                <button data-id="${u.id}" class="edit-user text-indigo-600 hover:text-indigo-900 mr-4">Editar</button>
+                                <button data-id="${u.id}" class="delete-user text-red-600 hover:text-red-900">Eliminar</button>
+                            ` : '<span class="text-gray-400">Ver</span>'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            if (canEditDelete) {
+                document.querySelectorAll('.edit-user').forEach(btn => {
+                    btn.onclick = (e) => {
+                        const userId = e.currentTarget.dataset.id;
+                        const user = users.find(u => u.id === userId);
+                        if (user) openUserModal(user);
+                    };
+                });
+                document.querySelectorAll('.delete-user').forEach(btn => {
+                    btn.onclick = (e) => deleteItem('users_profiles', e.currentTarget.dataset.id);
+                });
+            }
+        }
+
+
+        function renderScheduleGrid() {
+            if (centers.length === 0) {
+                scheduleGrid.innerHTML = `<div class="p-8 text-center text-gray-500">Añade al menos un centro para empezar a planificar.</div>`;
+                return;
+            }
+
+            const weekDays = getWeekDays(currentDate);
+            const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            
+            // Reverted grid-cols to 8 (1 for center name, 7 for days)
+            let headerHtml = `<div class="grid grid-cols-8 sticky top-0 bg-gray-200 z-10 font-bold">
+                                <div class="p-3 border-r border-b border-gray-300">Centro</div>`;
+            weekDays.forEach((day, index) => {
+                headerHtml += `<div class="p-3 text-center border-r border-b border-gray-300">
+                                ${dayNames[index]}<br>
+                                <span class="font-normal text-sm">${day.getDate()}/${day.getMonth() + 1}</span>
+                                <div class="font-normal text-xs text-gray-600">(Hora / Sacerdote / Obs.)</div>
+                               </div>`;
+            });
+            // Removed: No separate header for Observaciones, it's now part of each day's column
+            headerHtml += `</div>`;
+
+            const isDisabled = currentUserRole !== 'Administrador'; // Sacerdote can view but not edit
+
+            let bodyHtml = centers.map(center => {
+                // Reverted grid-cols to 8 for each row
+                let rowHtml = `<div class="grid grid-cols-8 border-b border-gray-300 items-stretch">
+                                <div class="p-3 font-semibold bg-gray-50 border-r border-gray-300 flex items-center">${center.name}</div>`;
+                
+                weekDays.forEach(day => {
+                    const dateStr = formatDate(day);
+                    const assignment = schedule[dateStr]?.[center.id] || {}; // Get assignment object
+                    
+                    // Determine default mass time for the day
+                    const defaultMassTime = getDefaultMassTimeForDay(center, day);
+
+                    const currentMassTime = assignment.massTime || defaultMassTime || '';
+                    const currentPriestId = assignment.priestId || ''; 
+                    const currentNotes = assignment.notes || ''; // Get notes for this specific day/center
+
+                    let cellInnerHtml = '';
+                    if (currentPriestId === 'NO_MASS') { 
+                        // If 'No hay misa' is selected, show only text and allow changing it back
+                        cellInnerHtml = `
+                            <p class="text-red-600 font-bold text-center mb-1">No hay misa</p>
+                            <select data-date="${dateStr}" data-center="${center.id}" data-key="priestId" class="schedule-select-priest w-full p-1 border border-red-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-red-500 text-sm" ${isDisabled ? 'disabled' : ''}>
+                                <option value="">-- Sin asignar --</option>
+                                <option value="NO_MASS" selected>No hay misa</option>
+                                ${priests.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                            </select>
+                        `;
+                    } else {
+                        // Normal input and select
+                        const priestOptions = priests.map(p => 
+                            `<option value="${p.id}" ${currentPriestId === p.id ? 'selected' : ''}>${p.name}</option>`
+                        ).join('');
+
+                        cellInnerHtml = `
+                            <input type="time" value="${currentMassTime}" data-date="${dateStr}" data-center="${center.id}" data-key="massTime" class="schedule-input-time w-full p-1 border border-gray-200 rounded-md bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" ${isDisabled ? 'disabled' : ''}>
+                            <select data-date="${dateStr}" data-center="${center.id}" data-key="priestId" class="schedule-select-priest w-full p-1 border border-gray-200 rounded-md bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" ${isDisabled ? 'disabled' : ''}>
+                                <option value="">-- Sin asignar --</option>
+                                <option value="NO_MASS">No hay misa</option>
+                                ${priestOptions}
+                            </select>
+                        `;
+                    }
+
+                    rowHtml += `<div class="p-2 border-r border-gray-300 flex flex-col items-center justify-center space-y-1">
+                                    ${cellInnerHtml}
+                                    <textarea rows="2" data-date="${dateStr}" data-center="${center.id}" data-key="notes" class="schedule-input-notes w-full p-1 border border-gray-200 rounded-md bg-white hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm resize-y" placeholder="Observaciones..." ${isDisabled ? 'disabled' : ''}>${currentNotes}</textarea>
+                                </div>`;
+                });
+                // Removed: No separate column for notes, it's now inside each day's column
+                rowHtml += `</div>`;
+                return rowHtml;
+            }).join('');
+            
+            scheduleGrid.innerHTML = headerHtml + bodyHtml;
+
+            // Attach event listeners for time input, priest select, and notes textarea only if not disabled
+            if (!isDisabled) {
+                document.querySelectorAll('.schedule-input-time').forEach(input => {
+                    input.onchange = (e) => {
+                        const { date, center, key } = e.target.dataset;
+                        updateScheduleAssignment(date, center, key, e.target.value);
+                    };
+                });
+                document.querySelectorAll('.schedule-select-priest').forEach(select => {
+                    select.onchange = (e) => {
+                        const { date, center, key } = e.target.dataset;
+                        updateScheduleAssignment(date, center, key, e.target.value);
+                    };
+                });
+                document.querySelectorAll('.schedule-input-notes').forEach(textarea => {
+                    textarea.onchange = (e) => { // Use 'onchange' or 'oninput' for notes
+                        const { date, center, key } = e.target.dataset;
+                        updateScheduleAssignment(date, center, key, e.target.value);
+                    };
+                });
+            }
+        }
+        
+        function renderAdminPage() { // This now only renders the schedule, other parts handled by showAdminSubSection
+            const weekDays = getWeekDays(currentDate);
+            const startOfWeek = weekDays[0];
+            const endOfWeek = weekDays[6];
+            weekDisplay.textContent = `Semana del ${startOfWeek.toLocaleDateString('es-ES')} al ${endOfWeek.toLocaleDateString('es-ES')}`;
+            renderScheduleGrid();
+        }
+
+        function changeWeek(direction) {
+            currentDate.setDate(currentDate.getDate() + 7 * direction);
+            subscribeToDataChanges(); // Resubscribe to get new week's schedule data
+            renderAdminPage();
+        }
+
+        // --- RENDERIZADO DE LA UI (HOME VIEW) ---
+
+        function renderHomePage() {
+            renderTodayMasses();
+            renderMiniCalendar();
+            renderWeekMasses();
+        }
+		
+		function renderTodayMasses() {
+		    const today    = homeCurrentDate;
+		    const todayStr = formatDate(today);
+		    // Actualiza título
+		    todayMassesTitle.textContent =
+		      `Misas de hoy (${dayName(today)}, ${today.getDate()} de ${monthName(today)})`;
+
+		    // Configura botón de calendario Dominicos
+		    const d = today.getDate();
+		    const m = today.getMonth() + 1;
+		    const y = today.getFullYear();
+		    const dominicosUrl = `https://www.dominicos.org/predicacion/evangelio-del-dia/${d}-${m}-${y}/`;
+		    const calendarHtml =
+		      `<a href="${dominicosUrl}" target="_blank" rel="noopener noreferrer"
+		          class="ml-auto bg-blue-500 text-white p-2 rounded-md hover:bg-yellow-600 transition-colors shadow-sm"
+		          aria-label="Evangelio del día">📅</a>`;
+
+		    // Asegura que solo haya un contenedor de botón
+		    const header = todayMassesTitle.parentNode;
+		    const prevBtn = header.querySelector('#todayCalendarButton');
+		    if (prevBtn) prevBtn.remove();
+		    const btnContainer = document.createElement('div');
+		    btnContainer.id = 'todayCalendarButton';
+		    btnContainer.className = 'flex items-center ml-auto';
+		    btnContainer.innerHTML = calendarHtml;
+		    header.appendChild(btnContainer);
+
+		    // Renderiza lista de misas
+		    const todaySchedule = schedule[todayStr] || {};
+		    let html = '';
+		    const rawEntries = Object.entries(todaySchedule)
+		      .filter(([centerId]) => {
+		        // Si usuario es Centro, solo su centro
+		        return currentUserRole === 'Centro'
+		          ? centerId === currentUserAssignedCenterId
+		          : true;
+		      });
+
+		    if (rawEntries.length === 0) {
+		        html = '<p class="text-gray-500">No hay misas programadas para hoy.</p>';
+		    } else {
+		        rawEntries
+		          .sort((a, b) => {
+		            const centerA = centers.find(c => c.id === a[0]);
+		            const centerB = centers.find(c => c.id === b[0]);
+		            const t1 = a[1].massTime || getDefaultMassTimeForDay(centerA, today);
+		            const t2 = b[1].massTime || getDefaultMassTimeForDay(centerB, today);
+		            return t1.localeCompare(t2);
+		          })
+		          .forEach(([centerId, assignment]) => {
+		            const center = centers.find(c => c.id === centerId) || {};
+		            const priest = priests.find(p => p.id === assignment.priestId) || {};
+		            const time = assignment.massTime || getDefaultMassTimeForDay(center, today);
+		            const mapsIcon = center.location
+		              ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(center.location)}" target="_blank" rel="noopener noreferrer" class="mr-2">
+		                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 inline-block text-blue-500">
+		                     <path d="M12 2c-4.418 0-8 3.582-8 8a8.995 8.995 0 0 0 2.217 5.86L12 22l5.783-6.14A8.995 8.995 0 0 0 20 10c0-4.418-3.582-8-8-8zm0 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+		                   </svg>
+		                 </a>`
+		              : '';
+		            const timeLabel = assignment.priestId === 'NO_MASS'
+		              ? '<strong class="text-red-600">No hay misa</strong>'
+		              : `(${time})`;
+		            const priestHtml = assignment.priestId && assignment.priestId !== 'NO_MASS'
+		              ? `- <span class="${priest.name && priest.name !== 'Sacerdote no asignado'
+		                   ? 'font-bold text-blue-700'
+		                   : 'text-gray-800'} priest-name-clickable cursor-pointer hover:underline"
+		                   data-priest-name="${priest.name}"
+		                   data-priest-phone="${priest.phone||''}"
+		                   data-priest-email="${priest.email||''}">
+		                   ${priest.name}
+		                 </span>`
+		              : '';
+
+		            html += `
+		              <div class="bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex flex-col">
+		                <div class="flex items-center justify-between">
+		                  <p class="text-sm flex items-center">
+		                    ${mapsIcon}
+		                    <strong>${center.name||'Centro Desconocido'}</strong>&nbsp;${timeLabel} ${priestHtml}
+		                  </p>
+		                </div>
+		                ${assignment.notes
+		                  ? `<p class="text-xs text-gray-500 italic mt-1 ml-6">(${assignment.notes})</p>`
+		                  : ''}
+		              </div>`;
+		          });
+		    }
+		    todayMassesList.innerHTML = html;
+
+		    // Reactiva modal de contacto con sacerdote
+		    document.querySelectorAll('.priest-name-clickable').forEach(el => {
+		      el.onclick = e => openPriestContactModal({
+		        name:  e.target.dataset.priestName,
+		        phone: e.target.dataset.priestPhone,
+		        email: e.target.dataset.priestEmail
+		      });
+		    });
+		}
+		
+		
+	
+       
+        function renderMiniCalendar() {
+            monthDisplay.textContent = `${monthName(homeCalendarDate)} ${homeCalendarDate.getFullYear()}`;
+            miniCalendarGrid.innerHTML = '';
+
+            const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+            dayNames.forEach(name => {
+                miniCalendarGrid.innerHTML += `<div class="font-bold text-gray-500">${name}</div>`;
+            });
+
+            const daysInMonth = new Date(homeCalendarDate.getFullYear(), homeCalendarDate.getMonth() + 1, 0).getDate();
+            const firstDayOfMonth = new Date(homeCalendarDate.getFullYear(), homeCalendarDate.getMonth(), 1).getDay(); // 0 for Sunday, 1 for Monday etc.
+            const startDayIndex = (firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1); // Adjust to make Monday the first day (0-indexed)
+
+            // Fill leading empty days
+            for (let i = 0; i < startDayIndex; i++) {
+                miniCalendarGrid.innerHTML += `<div></div>`;
+            }
+
+            // Fill days of the month
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(homeCalendarDate.getFullYear(), homeCalendarDate.getMonth(), i);
+                const dateStr = formatDate(date);
+
+                // Determine if there are masses for this day, considering Centro filter
+                let hasMasses = false;
+                if (schedule[dateStr]) {
+                    const centersWithMasses = Object.keys(schedule[dateStr]).filter(centerId => {
+                        const assignment = schedule[dateStr][centerId];
+                        return assignment.priestId !== 'NO_MASS' && (assignment.massTime || getDefaultMassTimeForDay(centers.find(c => c.id === centerId), date));
+                    });
+
+                    if (currentUserRole === 'Centro') {
+                        // For 'Centro' user, check only their assigned center
+                        hasMasses = centersWithMasses.includes(currentUserAssignedCenterId);
+                    } else {
+                        // For Admin/Sacerdote, check if any center has masses
+                        hasMasses = centersWithMasses.length > 0;
+                    }
+                }
+                
+                const isToday = date.toDateString() === new Date().toDateString();
+
+                let dayClasses = 'p-1 rounded-md cursor-pointer';
+                if (isToday) {
+                    dayClasses += ' bg-blue-500 text-white font-bold';
+                } else if (hasMasses) {
+                    dayClasses += ' bg-green-200 text-green-800 font-medium';
+                } else {
+                    dayClasses += ' text-gray-700 hover:bg-gray-200';
+                }
+                
+                miniCalendarGrid.innerHTML += `<div class="${dayClasses}" data-date="${dateStr}">${i}</div>`;
+            }
+
+            // Add click listener for calendar days
+            document.querySelectorAll('#mini-calendar-grid div[data-date]').forEach(dayDiv => {
+                dayDiv.onclick = (e) => {
+                    const selectedDateStr = e.target.dataset.date;
+                    homeCurrentDate = new Date(selectedDateStr);
+                    homeCurrentWeekDate = new Date(selectedDateStr); // Update homeCurrentWeekDate
+                    renderTodayMasses(); // Update today's masses section
+                    renderWeekMasses(); // Update week's masses section
+                };
+            });
+        }
+
+        function changeMonth(direction) {
+            homeCalendarDate.setMonth(homeCalendarDate.getMonth() + direction);
+            renderMiniCalendar();
+            // No need to resubscribe to data changes on month change, as the onSnapshot
+            // for schedule data for the current month is already handling all relevant dates.
+            // subscribeToDataChanges(); 
+        }
+
+		function renderWeekMasses() {
+		    const weekDays    = getWeekDays(homeCurrentWeekDate);
+		    const startOfWeek = weekDays[0];
+		    const endOfWeek   = weekDays[6];
+		    weekMassesTitle.textContent =
+		      `Misas semana ${startOfWeek.getDate()} al ${endOfWeek.getDate()} de ${monthName(endOfWeek)}`;
+
+		    let html = '';
+		    weekDays.forEach(day => {
+		        const dateStr     = formatDate(day);
+		        const dayNameText = `${dayName(day)}, ${day.getDate()} de ${monthName(day)}`;
+
+		        // Botón calendario Dominicos dinámico
+		        const d = day.getDate();
+		        const m = day.getMonth() + 1;
+		        const y = day.getFullYear();
+		        const dominicosUrl = `https://www.dominicos.org/predicacion/evangelio-del-dia/${d}-${m}-${y}/`;
+		        const litCalBtn = `<a href="${dominicosUrl}" target="_blank" rel="noopener noreferrer" class="bg-blue-500 text-white p-2 rounded-md hover:bg-yellow-600 transition-colors shadow-sm" aria-label="Evangelio del día">📅</a>`;
+
+		        html += `
+		        <div class="bg-gray-50 p-3 rounded-md shadow-sm mb-4">
+		          <div class="flex items-center justify-between mb-2">
+		            <h3 class="font-semibold text-md text-gray-700">${dayNameText}</h3>
+		            <div class="flex items-center">
+		              ${litCalBtn}
+		            </div>
+		          </div>
+		          <div class="ml-2 mt-1 space-y-2">
+		        `;
+
+		        const daySchedule = schedule[dateStr] || {};
+		        const rawEntries = Object.entries(daySchedule)
+		          .filter(([centerId]) => currentUserRole === 'Centro'
+		            ? centerId === currentUserAssignedCenterId
+		            : true
+		          );
+		        if (rawEntries.length === 0) {
+		            html += `<p class="text-gray-500 text-sm">No hay misas programadas.</p>`;
+		        } else {
+		            rawEntries
+		              .sort((a, b) => {
+		                const centerA = centers.find(c => c.id === a[0]);
+		                const centerB = centers.find(c => c.id === b[0]);
+		                const t1 = a[1].massTime || getDefaultMassTimeForDay(centerA, day);
+		                const t2 = b[1].massTime || getDefaultMassTimeForDay(centerB, day);
+		                return t1.localeCompare(t2);
+		              })
+		              .forEach(([centerId, assignment]) => {
+		                const center = centers.find(c => c.id === centerId) || {};
+		                const priest = priests.find(p => p.id === assignment.priestId) || {};
+		                const time   = assignment.massTime || getDefaultMassTimeForDay(center, day);
+		                const mapsIcon = center.location
+		                  ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(center.location)}" target="_blank" rel="noopener noreferrer" class="mr-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 inline-block text-blue-500"><path d="M12 2c-4.418 0-8 3.582-8 8a8.995 8.995 0 0 0 2.217 5.86L12 22l5.783-6.14A8.995 8.995 0 0 0 20 10c0-4.418-3.582-8-8-8zm0 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/></svg></a>`
+		                  : '';
+		                const timeLabel = assignment.priestId === 'NO_MASS'
+		                  ? '<strong class="text-red-600">No hay misa</strong>'
+		                  : `(${time})`;
+		                const priestHtml = assignment.priestId && assignment.priestId !== 'NO_MASS'
+		                  ? `- <span class="${priest.name && priest.name !== 'Sacerdote no asignado' ? 'font-bold text-blue-700' : 'text-gray-800'} priest-name-clickable cursor-pointer hover:underline" data-priest-name="${priest.name}" data-priest-phone="${priest.phone}" data-priest-email="${priest.email}">${priest.name}</span>`
+		                  : '';
+
+		                html += `
+		                  <div class="flex items-center justify-between">
+		                    <p class="text-sm flex items-center">
+		                      ${mapsIcon}<strong>${center.name}</strong>&nbsp;${timeLabel} ${priestHtml}
+		                    </p>
+		                  </div>
+		                  ${assignment.notes ? `<p class="text-xs text-gray-500 italic ml-6">(${assignment.notes})</p>` : ''}`;
+		              });
+		        }
+
+		        html += `</div></div>`;
+		    });
+
+		    weekMassesList.innerHTML = html;
+
+		    // Reactiva modal de contacto con sacerdote
+		    document.querySelectorAll('.priest-name-clickable').forEach(el => {
+		      el.onclick = e => openPriestContactModal({
+		        name:  e.target.dataset.priestName,
+		        phone: e.target.dataset.priestPhone,
+		        email: e.target.dataset.priestEmail
+		      });
+		    });
+		}
+
+
+        // Function to open priest contact modal
+        function openPriestContactModal(priest) {
+            priestContactName.textContent = priest.name;
+            
+            // Set phone link
+            if (priest.phone) {
+                contactPhone.href = `tel:${priest.phone}`;
+                contactPhone.classList.remove('opacity-50', 'cursor-not-allowed');
+                contactPhone.onclick = () => { /* Prevent default if no number */ }; // Re-enable
+            } else {
+                contactPhone.href = '#';
+                contactPhone.classList.add('opacity-50', 'cursor-not-allowed');
+                contactPhone.onclick = (e) => { e.preventDefault(); showCustomAlert('Número de teléfono no disponible.'); };
+            }
+
+            // Set WhatsApp link
+            // WhatsApp requires phone number without +, spaces, or dashes for the wa.me link
+            // New: More robust cleaning of phone number to remove all non-digits, including invisible characters.
+            const whatsappPhone = priest.phone ? priest.phone.replace(/[^\d]/g, '') : '';
+            if (whatsappPhone) {
+                contactWhatsapp.href = `https://wa.me/${whatsappPhone}`;
+                contactWhatsapp.classList.remove('opacity-50', 'cursor-not-allowed');
+                contactWhatsapp.onclick = () => { /* Prevent default if no number */ }; // Re-enable
+            } else {
+                contactWhatsapp.href = '#';
+                contactWhatsapp.classList.add('opacity-50', 'cursor-not-allowed');
+                contactWhatsapp.onclick = (e) => { e.preventDefault(); showCustomAlert('Número de WhatsApp no disponible.'); };
+            }
+
+            // Set email link
+            if (priest.email) {
+                contactEmail.href = `mailto:${priest.email}`;
+                contactEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+                contactEmail.onclick = () => { /* Prevent default if no email */ }; // Re-enable
+            } else {
+                contactEmail.href = '#';
+                contactEmail.classList.add('opacity-50', 'cursor-not-allowed');
+                contactEmail.onclick = (e) => { e.preventDefault(); showCustomAlert('Correo electrónico no disponible.'); };
+            }
+
+            priestContactModal.classList.remove('hidden');
+        }
+
+        // --- CSV Export/Import Functions ---
+
+        /**
+         * Converts an array of objects to a CSV string.
+         * Handles simple object properties.
+         * @param {Array<Object>} data The array of objects to convert.
+         * @param {Array<string>} headers Optional array of headers to define column order and names. If not provided, keys of the first object are used.
+         * @returns {string} The CSV formatted string.
+         */
+        function convertToCsv(data, headers = []) {
+            if (data.length === 0) return '';
+
+            const allKeys = new Set();
+            data.forEach(row => {
+                Object.keys(row).forEach(key => allKeys.add(key));
+            });
+
+            // Use provided headers or all unique keys if no headers are specified
+            const finalHeaders = headers.length > 0 ? headers : Array.from(allKeys);
+
+            const csvRows = [];
+            csvRows.push(finalHeaders.join(',')); // Header row
+
+            for (const row of data) {
+                const values = finalHeaders.map(header => {
+                    let value = row[header];
+                    if (value === null || value === undefined) {
+                        value = '';
+                    } else if (typeof value === 'object' && value !== null) {
+                        // For nested objects or arrays, stringify them
+                        value = JSON.stringify(value);
+                    }
+                    // Escape double quotes and enclose values with commas
+                    value = String(value).replace(/"/g, '""');
+                    return `"${value}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+            return csvRows.join('\n');
+        }
+
+        /**
+         * Triggers a download of the given content as a CSV file.
+         * @param {string} csvContent The CSV string to download.
+         * @param {string} filename The desired filename for the CSV file.
+         */
+        function downloadCsv(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { // Feature detection
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        /**
+         * Parses a CSV string into an array of objects.
+         * Assumes the first row is the header.
+         * @param {string} csvString The CSV string to parse.
+         * @returns {Array<Object>} An array of objects representing the CSV data.
+         */
+        function parseCsv(csvString) {
+            const lines = csvString.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length === 0) return [];
+
+            // Split headers, also handling potential quotes if the header row itself is quoted
+            const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                                    .map(h => h.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+            const result = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                // Split by comma only if the comma is not inside a pair of quotes
+                const rawValues = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+
+                const values = rawValues.map(v => {
+                    v = v.trim();
+                    // Remove leading/trailing quotes and unescape internal quotes
+                    if (v.startsWith('"') && v.endsWith('"')) {
+                        return v.substring(1, v.length - 1).replace(/""/g, '"');
+                    }
+                    return v;
+                });
+                
+                // Add this log for immediate visibility of parsed values for each row
+                console.log(`Parsed values for row ${i + 1}:`, values); 
+
+                if (values.length !== headers.length) {
+                    console.warn(`Skipping row ${i + 1} due to column mismatch. Headers: ${headers.length}, Values: ${values.length}`);
+                    console.warn('Headers:', headers);
+                    console.warn('Values:', values);
+                    continue;
+                }
+
+                const rowObject = {};
+                for (let j = 0; j < headers.length; j++) {
+                    rowObject[headers[j]] = values[j];
+                }
+                result.push(rowObject);
+            }
+            return result;
+        }
+
+
+        // --- Specific Export Functions ---
+
+        async function exportCentersToCsv() {
+            if (currentUserRole !== 'Administrador') { showCustomAlert("No tienes permisos para exportar datos."); return; }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const centersData = centers.map(c => ({
+                    id: c.id,
+                    name: c.name || '',
+                    location: c.location || '',
+                    weekdayMassTime: c.weekdayMassTime || '',
+                    weekendMassTime: c.weekendMassTime || '',
+                    notes: c.notes || ''
+                }));
+                const headers = ['id', 'name', 'location', 'weekdayMassTime', 'weekendMassTime', 'notes'];
+                const csv = convertToCsv(centersData, headers);
+                downloadCsv(csv, 'centros.csv');
+                showCustomAlert('Datos de centros exportados.');
+            } catch (error) {
+                console.error("Error exporting centers:", error);
+                showCustomAlert('Error al exportar centros.');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function exportPriestsToCsv() {
+            if (currentUserRole !== 'Administrador') { showCustomAlert("No tienes permisos para exportar datos."); return; }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const priestsData = priests.map(p => ({
+                    id: p.id,
+                    name: p.name || '',
+                    email: p.email || '',
+                    phone: p.phone || ''
+                }));
+                const headers = ['id', 'name', 'email', 'phone'];
+                const csv = convertToCsv(priestsData, headers);
+                downloadCsv(csv, 'sacerdotes.csv');
+                showCustomAlert('Datos de sacerdotes exportados.');
+            } catch (error) {
+                console.error("Error exporting priests:", error);
+                showCustomAlert('Error al exportar sacerdotes.');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function exportUsersToCsv() {
+            if (currentUserRole !== 'Administrador') { showCustomAlert("No tienes permisos para exportar datos."); return; }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const usersData = users.map(u => ({
+                    id: u.id,
+                    name: u.name || '',
+                    email: u.email || '',
+                    role: u.role || 'Sacerdote',
+                    assignedCenterId: u.assignedCenterId || ''
+                }));
+                const headers = ['id', 'name', 'email', 'role', 'assignedCenterId'];
+                const csv = convertToCsv(usersData, headers);
+                downloadCsv(csv, 'usuarios.csv');
+                showCustomAlert('Datos de usuarios exportados.');
+            } catch (error) {
+                console.error("Error exporting users:", error);
+                showCustomAlert('Error al exportar usuarios.');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        async function exportScheduleToCsv() {
+            if (currentUserRole !== 'Administrador') { showCustomAlert("No tienes permisos para exportar datos."); return; }
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const scheduleRows = [];
+                // Iterate through all dates in the schedule object
+                for (const dateStr in schedule) {
+                    const dailySchedule = schedule[dateStr];
+                    for (const centerId in dailySchedule) {
+                        const assignment = dailySchedule[centerId];
+                        scheduleRows.push({
+                            date: dateStr,
+                            centerId: centerId,
+                            priestId: assignment.priestId || '',
+                            massTime: assignment.massTime || '',
+                            notes: assignment.notes || '' // Include notes in export
+                        });
+                    }
+                }
+                const headers = ['date', 'centerId', 'priestId', 'massTime', 'notes']; // Add notes to headers
+                const csv = convertToCsv(scheduleRows, headers);
+                downloadCsv(csv, 'misas.csv');
+                showCustomAlert('Datos de misas exportados.');
+            } catch (error) {
+                console.error("Error exporting schedule:", error);
+                showCustomAlert('Error al exportar misas.');
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        // --- Specific Import Functions ---
+
+        /**
+         * Handles the file input change event, displaying the selected file name and enabling the import button.
+         * @param {Event} event The change event.
+         * @param {HTMLElement} fileNameDisplay The element to display the file name.
+         * @param {HTMLButtonElement} importButton The button to enable/disable.
+         */
+        function handleFileSelection(event, fileNameDisplay, importButton) {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                importButton.disabled = false;
+            } else {
+                fileNameDisplay.textContent = 'Ningún archivo seleccionado';
+                importButton.disabled = true;
+            }
+        }
+
+        /**
+         * Generic function to import data from a CSV file into a Firestore collection.
+         * @param {HTMLInputElement} fileInputEl The file input element.
+         * @param {HTMLElement} fileNameDisplayEl The element to display the file name.
+         * @param {HTMLButtonElement} importButtonEl The button to enable/disable.
+         * @param {string} collectionName The name of the Firestore collection.
+         */
+        async function importDataFromCsv(fileInputEl, fileNameDisplayEl, importButtonEl, collectionName) {
+            if (currentUserRole !== 'Administrador') {
+                showCustomAlert("No tienes permisos para importar datos.");
+                return;
+            }
+            const file = fileInputEl.files[0];
+            if (!file) {
+                showCustomAlert("Por favor, selecciona un archivo CSV.");
+                return;
+            }
+
+            const confirmed = await showConfirmDialog(`¿Estás seguro de que quieres importar este archivo a la colección "${collectionName}"? Esto reemplazará TODOS los datos existentes.`);
+            if (!confirmed) {
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const csvString = e.target.result;
+                    console.log("CSV Raw Content:", csvString); // Log raw CSV content
+                    const parsedData = parseCsv(csvString);
+                    console.log("Parsed Data:", parsedData); // Log parsed data array
+
+                    const batch = writeBatch(db);
+                    const collectionRef = getCollectionRef(collectionName);
+
+                    // Step 1: Delete all existing documents in the collection
+                    console.log(`Deleting all existing documents in ${collectionName}...`);
+                    const existingDocs = await getDocs(collectionRef);
+                    existingDocs.forEach((docSnap) => {
+                        batch.delete(docSnap.ref);
+                    });
+                    console.log(`Deleted ${existingDocs.size} documents.`);
+
+                    // Step 2: Add new documents from CSV
+                    if (parsedData.length === 0) {
+                        console.log("No data parsed from CSV. Batch will only delete existing documents.");
+                    }
+
+                    if (collectionName === 'schedule') {
+                        // Special handling for schedule to aggregate by date
+                        const scheduleByDate = {};
+                        parsedData.forEach(row => {
+                            const date = row.date;
+                            const centerId = row.centerId;
+                            const priestId = row.priestId;
+                            const massTime = row.massTime;
+                            const notes = row.notes; // Get notes from parsed CSV
+
+                            if (date && centerId) {
+                                if (!scheduleByDate[date]) {
+                                    scheduleByDate[date] = {};
+                                }
+                                // Include notes in the schedule data
+                                scheduleByDate[date][centerId] = { priestId, massTime, notes };
+                            }
+                        });
+
+                        for (const dateStr in scheduleByDate) {
+                            const docRef = doc(collectionRef, dateStr);
+                            console.log(`Batching schedule for date ${dateStr}:`, scheduleByDate[dateStr]);
+                            batch.set(docRef, scheduleByDate[dateStr], { merge: true });
+                        }
+
+                    } else {
+                        // For other collections, add each row as a new document
+                        parsedData.forEach(row => {
+                            const docId = row.id && row.id.trim() !== '' ? String(row.id) : crypto.randomUUID(); // Ensure docId is string
+                            const docRef = doc(collectionRef, docId);
+                            const { id, ...dataToSave } = row; 
+                            // Ensure dataToSave does not contain empty strings for fields that might be empty in CSV but expected as null/undefined by Firestore if not merge
+                            Object.keys(dataToSave).forEach(key => {
+                                if (dataToSave[key] === '') {
+                                    delete dataToSave[key]; // Remove empty string fields
+                                }
+                            });
+                            console.log(`Batching document for ${collectionName} with ID ${docId}:`, dataToSave); // Log data being saved
+                            batch.set(docRef, dataToSave, { merge: true }); // Use set with merge to create or overwrite
+                        });
+                    }
+
+                    await batch.commit();
+                    console.log("Batch commit successful.");
+                    showCustomAlert(`Importación a "${collectionName}" completada exitosamente.`);
+                    
+                    fileInputEl.value = null; 
+                    fileNameDisplayEl.textContent = 'Ningún archivo seleccionado';
+                    importButtonEl.disabled = true;
+
+                };
+                reader.onerror = (error) => {
+                    console.error("Error reading file:", error);
+                    showCustomAlert("Error al leer el archivo.");
+                };
+                reader.readAsText(file);
+            } catch (error) {
+                console.error("Error during import process:", error);
+                showCustomAlert("Error durante el proceso de importación: " + error.message);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+
+        // --- FUNCIONES DE UTIDAD ---
+        function getWeekDays(date) {
+            const start = new Date(date);
+            const dayOfWeek = start.getDay(); 
+            const diff = start.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Monday as first day
+            start.setDate(diff);
+            
+            return Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                return d;
+            });
+        }
+
+        function getMonthDates(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+
+            const days = [];
+            let current = new Date(firstDayOfMonth);
+            while (current <= lastDayOfMonth) {
+                days.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            return days;
+        }
+
+        // Helper to get default mass time based on day of week
+        function getDefaultMassTimeForDay(center, date) {
+            if (!center) return '';
+            const dayOfWeek = date.getDay(); // 0 for Sunday, 1 for Monday
+            if (dayOfWeek === 0 || dayOfWeek === 6) { // Sunday or Saturday
+                return center.weekendMassTime || '';
+            } else { // Weekday
+                return center.weekdayMassTime || '';
+            }
+        }
+        
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function monthName(date) {
+            const options = { month: 'long' };
+            return date.toLocaleDateString('es-ES', options);
+        }
+
+        function dayName(date) {
+            const options = { weekday: 'long' };
+            return date.toLocaleDateString('es-ES', options);
+        }
+        console.log("Script before DOMContentLoaded listener."); // Log for debugging
+
+        // --- Initial setup of event listeners that should always be present ---
+        // This ensures the login button and basic navigation always work.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Explicitly ensure all modals are hidden on load for debugging and robustness
+            document.getElementById('priest-contact-modal').classList.add('hidden');
+            document.getElementById('center-form-modal').classList.add('hidden');
+            document.getElementById('priest-form-modal').classList.add('hidden');
+            document.getElementById('user-form-modal').classList.add('hidden');
+            document.getElementById('custom-confirm-modal').classList.add('hidden');
+            console.log('DOM Content Loaded: All modals explicitly set to hidden.');
+
+            loginBtn.onclick = handleLogin;
+            logoutBtn.onclick = handleLogout;
+            prevMonthBtn.onclick = () => changeMonth(-1);
+            nextMonthBtn.onclick = () => changeMonth(1);
+
+            // Print button event listener
+            printScheduleBtn.onclick = printSchedule;
+            
+            // Week navigation buttons for admin schedule
+            prevWeekBtn.onclick = () => changeWeek(-1);
+            nextWeekBtn.onclick = () => changeWeek(1);
+        });
+
+    </script>
+
+</body>
+</html>

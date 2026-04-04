@@ -4,70 +4,85 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Misas Logroño</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="app">
-    <section id="login-screen" class="card">
-      <h2>Misas Logroño - Iniciar sesión</h2>
-      <form id="login-form" autocomplete="off">
-        <label for="login-email">Correo</label>
-        <input id="login-email" type="email" required />
-        <label for="login-password">Contraseña</label>
-        <input id="login-password" type="password" required />
-        <button type="submit">Entrar</button>
-        <p id="login-error" class="error"></p>
-        <p id="login-loading" class="loading">Cargando datos...</p>
-      </form>
-      <p>Usuarios de ejemplo:</p>
-      <ul>
-        <li>admin@misas.local (password: admin12)</li>
-        <li>centro1@misas.local (password: centro1)</li>
-        <li>padre1@misas.local (password: padre1)</li>
-      </ul>
+    <section id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
+      <div class="bg-white rounded-lg shadow-md p-8 w-full max-w-md">
+        <h2 class="text-2xl font-bold text-center text-gray-900 mb-6">Misas Logroño - Iniciar sesión</h2>
+        <form id="login-form" autocomplete="off" class="space-y-4">
+          <div>
+            <label for="login-email" class="block text-sm font-medium text-gray-700">Correo</label>
+            <input id="login-email" type="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+            <input id="login-password" type="password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors">Entrar</button>
+          <p id="login-error" class="text-red-500 text-sm"></p>
+          <p id="login-loading" class="text-blue-500 text-sm hidden">Cargando datos...</p>
+        </form>
+        <div class="mt-6">
+          <p class="text-sm text-gray-600">Usuarios de ejemplo:</p>
+          <ul class="text-sm text-gray-500 mt-2 space-y-1">
+            <li>admin@misas.local (password: admin12)</li>
+            <li>centro1@misas.local (password: centro1)</li>
+            <li>padre1@misas.local (password: padre1)</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
-    <section id="main-screen" class="hidden">
-      <section class="hero">
-        <div class="hero-content">
-          <h2>Misas Logroño</h2>
-          <p>Planificador y consulta diaria de misas en los centros parroquiales.</p>
+    <section id="main-screen" class="hidden min-h-screen bg-gray-100">
+      <section class="bg-blue-600 text-white py-12">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+          <h2 class="text-3xl font-bold mb-4">Misas Logroño</h2>
+          <p class="text-xl">Planificador y consulta diaria de misas en los centros parroquiales.</p>
         </div>
       </section>
 
-      <header class="main-header">
-        <div>
-          <h1>Panel de control</h1>
-          <p id="subtitle"></p>
-        </div>
-        <div class="user-info">
-          <span id="current-user"></span>
-          <button id="logout-btn" class="secondary">Cerrar sesión</button>
+      <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Panel de control</h1>
+            <p id="subtitle" class="text-gray-600"></p>
+          </div>
+          <div class="flex items-center gap-4">
+            <span id="current-user" class="text-gray-700"></span>
+            <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors">Cerrar sesión</button>
+          </div>
         </div>
       </header>
 
-      <nav class="topnav">
-        <button data-view="home" class="active">Inicio</button>
-        <button data-view="admin" id="admin-tab" class="hidden">Admin</button>
-        <button id="print-home" class="secondary">Imprimir misas mensual</button>
+      <nav class="bg-gray-50 px-6 py-3 border-b border-gray-200">
+        <div class="flex gap-2">
+          <button data-view="home" class="bg-blue-500 text-white px-4 py-2 rounded-md transition-colors active">Inicio</button>
+          <button data-view="admin" id="admin-tab" class="bg-gray-500 text-white px-4 py-2 rounded-md transition-colors hidden">Admin</button>
+          <button id="print-home" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors">Imprimir misas mensual</button>
+        </div>
       </nav>
 
-      <main>
+      <main class="px-6 py-6">
         <section id="home-view" class="view"></section>
 
         <section id="admin-view" class="view hidden">
-          <div class="admin-tabs">
-            <button data-admin-view="centros" class="active">Centros</button>
-            <button data-admin-view="sacerdotes">Sacerdotes</button>
-            <button data-admin-view="misas">Misas mes</button>
-            <button data-admin-view="usuarios">Usuarios</button>
-          </div>
+          <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex gap-2 mb-6">
+              <button data-admin-view="centros" class="bg-blue-500 text-white px-4 py-2 rounded-md transition-colors active">Centros</button>
+              <button data-admin-view="sacerdotes" class="bg-gray-500 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition-colors">Sacerdotes</button>
+              <button data-admin-view="misas" class="bg-gray-500 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition-colors">Misas mes</button>
+              <button data-admin-view="usuarios" class="bg-gray-500 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition-colors">Usuarios</button>
+            </div>
 
-          <div id="admin-content">
-            <section id="admin-centros" class="admin-section"></section>
-            <section id="admin-sacerdotes" class="admin-section hidden"></section>
-            <section id="admin-misas" class="admin-section hidden"></section>
-            <section id="admin-usuarios" class="admin-section hidden"></section>
+            <div id="admin-content">
+              <section id="admin-centros" class="admin-section"></section>
+              <section id="admin-sacerdotes" class="admin-section hidden"></section>
+              <section id="admin-misas" class="admin-section hidden"></section>
+              <section id="admin-usuarios" class="admin-section hidden"></section>
+            </div>
           </div>
         </section>
       </main>
