@@ -138,7 +138,7 @@ function renderHome() {
   const sacerdotes = getData(STORAGE.sacerdotes);
 
   const visibleCenters = user.tipo === 'centro' ? centros.filter(c => c.id === user.centroId) : centros;
-  let html = '<h2>Mis as de la semana</h2>';
+  let html = '<h2>Misas de la semana</h2>';
 
   const dias = getWeekDates();
   html += '<table><thead><tr><th>Día</th><th>Centro</th><th>Hora</th><th>Sacerdote asignado</th></tr></thead><tbody>';

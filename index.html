@@ -27,21 +27,28 @@
     </section>
 
     <section id="main-screen" class="hidden">
-      <header>
+      <section class="hero">
+        <div class="hero-content">
+          <h2>Misas Logroño</h2>
+          <p>Planificador y consulta diaria de misas en los centros parroquiales.</p>
+        </div>
+      </section>
+
+      <header class="main-header">
         <div>
-          <h1>Misas Logroño</h1>
+          <h1>Panel de control</h1>
           <p id="subtitle"></p>
         </div>
-        <div>
+        <div class="user-info">
           <span id="current-user"></span>
-          <button id="logout-btn">Cerrar sesión</button>
+          <button id="logout-btn" class="secondary">Cerrar sesión</button>
         </div>
       </header>
 
       <nav class="topnav">
         <button data-view="home" class="active">Inicio</button>
         <button data-view="admin" id="admin-tab" class="hidden">Admin</button>
-        <button id="print-home">Imprimir misas mensual</button>
+        <button id="print-home" class="secondary">Imprimir misas mensual</button>
       </nav>
 
       <main>
