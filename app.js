@@ -138,31 +138,90 @@ function renderHome() {
   const sacerdotes = getData(STORAGE.sacerdotes);
 
   const visibleCenters = user.tipo === 'centro' ? centros.filter(c => c.id === user.centroId) : centros;
-  let html = '<h2>Misas de la semana</h2>';
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const todayDay = today.getDate();
 
-  const dias = getWeekDates();
-  html += '<table><thead><tr><th>Día</th><th>Centro</th><th>Hora</th><th>Sacerdote asignado</th></tr></thead><tbody>';
-
-  dias.forEach(d => {
-    const day = d.getDate();
-    const month = d.getMonth() + 1;
-    const key = `${d.getFullYear()}-${month.toString().padStart(2, '0')}`;
-    visibleCenters.forEach((centro, idx) => {
-      const data = plan[key] && plan[key][day]?.[centro.id] || null;
-      const sacerdote = sacerdotes.find(s => s.id === data)?.nombre || 'Sin asignar';
-      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-      const hora = isWeekend ? centro.horaFinSemana : centro.horaSemana;
-
-      html += `<tr><td>${formatDay(d)}</td><td>${centro.nombre}</td><td>${hora}</td><td>${sacerdote}</td></tr>`;
-    });
+  const todayMisas = visibleCenters.map(centro => {
+    const sacerdoteId = plan[todayKey]?.[todayDay]?.[centro.id] || null;
+    const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
+    return {
+      centro: centro.nombre,
+      sacerdote: sacerdote ? sacerdote.nombre : null,
+      hora: (today.getDay() === 0 || today.getDay() === 6) ? centro.horaFinSemana : centro.horaSemana
+    };
   });
 
-  html += '</tbody></table>';
-  if (user.tipo === 'centro') {
-    html += '<button id="print-center-month" class="secondary">Imprimir misas del mes de mi centro</button>';
-  } else {
-    html += '<button id="print-all-month" class="secondary">Imprimir misas del mes de todos los centros</button>';
-  }
+  const weekDates = getWeekDates();
+  const weekHtml = weekDates.map(d => {
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const key = `${d.getFullYear()}-${String(month).padStart(2, '0')}`;
+    const misas = visibleCenters.map(centro => {
+      const sacerdoteId = plan[key]?.[day]?.[centro.id] || null;
+      const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
+      return {
+        centro: centro.nombre,
+        sacerdote: sacerdote ? sacerdote.nombre : null
+      };
+    }).filter(item => item.sacerdote);
+
+    const content = misas.length
+      ? misas.map(item => `<li>${item.centro}: <strong>${item.sacerdote}</strong></li>`).join('')
+      : '<p class="empty-state">No hay misas programadas.</p>';
+
+    return `
+      <article class="week-card">
+        <h3>${formatDay(d)}</h3>
+        <ul>${content}</ul>
+      </article>
+    `;
+  }).join('');
+
+  const calendarHtml = renderCalendar(today.getFullYear(), today.getMonth());
+
+  const todayContent = todayMisas.some(m => m.sacerdote)
+    ? `<ul>${todayMisas.map(m => `<li>${m.centro} — ${m.hora} — <strong>${m.sacerdote}</strong></li>`).join('')}</ul>`
+    : '<p class="empty-state">No hay misas programadas para hoy.</p>';
+
+  const printButtonHtml = user.tipo === 'centro'
+    ? '<button id="print-center-month" class="secondary">Imprimir misas del mes de mi centro</button>'
+    : '<button id="print-all-month" class="secondary">Imprimir misas del mes de todos los centros</button>';
+
+  const html = `
+    <section class="home-header card">
+      <div>
+        <p class="eyebrow">Misas de hoy</p>
+        <h2>${formatDay(today)}</h2>
+        ${todayContent}
+      </div>
+      <div class="home-header-actions">
+        ${printButtonHtml}
+      </div>
+    </section>
+
+    <section class="home-grid">
+      <div class="card calendar-card">
+        <div class="calendar-header">
+          <h3>${today.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h3>
+          <div class="calendar-nav">
+            <button class="nav-btn">&#8249;</button>
+            <button class="nav-btn">&#8250;</button>
+          </div>
+        </div>
+        ${calendarHtml}
+      </div>
+      <div class="card week-panel">
+        <div class="week-panel-header">
+          <h3>Misas semana</h3>
+          <span>${formatDay(weekDates[0])} al ${formatDay(weekDates[6])}</span>
+        </div>
+        <div class="week-list">
+          ${weekHtml}
+        </div>
+      </div>
+    </section>
+  `;
 
   elements.homeView.innerHTML = html;
 
@@ -171,6 +230,31 @@ function renderHome() {
   } else {
     document.getElementById('print-all-month').addEventListener('click', () => printSchedule());
   }
+}
+
+function renderCalendar(year, month) {
+  const daysInMonth = getDaysInMonth(year, month + 1);
+  const firstDay = new Date(year, month, 1).getDay();
+  const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  let daysHtml = '';
+
+  for (let i = 0; i < offset; i += 1) {
+    daysHtml += '<div class="calendar-day empty"></div>';
+  }
+
+  const today = new Date();
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    daysHtml += `<div class="calendar-day${isToday ? ' today' : ''}">${day}</div>`;
+  }
+
+  return `
+    <div class="calendar-grid">
+      ${dayNames.map(name => `<div class="calendar-weekday">${name}</div>`).join('')}
+      ${daysHtml}
+    </div>
+  `;
 }
 
 function setupAdminTabs() {
@@ -461,10 +545,10 @@ function renderMisasMes() {
     centros.forEach(c => {
       const key = `${year}-${String(month).padStart(2, '0')}`;
       const assigned = plan[key]?.[d]?.[c.id] || '';
-      html += '<td><select data-dia="' + d + '" data-centro="' + c.id + '">';
+      html += '<td><select data-dia="' + d + '" data-centro="' + c.id + '" data-previous-value="' + assigned + '">';
       html += '<option value="">--</option>';
       sacerdotes.forEach(s => {
-        html += `<option value="${s.id}" ${s.id === assigned ? 'selected' : ''}>${s.nombre}</option>`;
+        html += `<option value="${s.id}" ${s.id == assigned ? 'selected' : ''}>${s.nombre}</option>`;
       });
       html += '</select></td>';
     });
@@ -476,13 +560,44 @@ function renderMisasMes() {
   html += '<p class="error" id="misas-error"></p>';
   elements.adminSections.misas.innerHTML = html;
 
+  // Inicializar selects
+  document.querySelectorAll('#misas-table tbody tr').forEach(row => updateSelectsForDay(row, sacerdotes));
+
   document.querySelectorAll('#misas-table select').forEach(select => {
-    select.addEventListener('change', () => updateMisasValidation());
+    select.addEventListener('change', (e) => {
+      const row = e.target.closest('tr');
+      updateSelectsForDay(row, sacerdotes);
+    });
   });
 
   document.getElementById('load-mesas-btn').addEventListener('click', () => renderMisasMes());
   document.getElementById('save-misas-btn').addEventListener('click', () => saveMisasMonth());
   document.getElementById('print-misas-btn').addEventListener('click', () => printSchedule());
+}
+
+function updateSelectsForDay(row, sacerdotes) {
+  const selects = Array.from(row.querySelectorAll('select'));
+  const assigned = new Set();
+
+  // Recopilar sacerdotes ya asignados en esta fila
+  selects.forEach(select => {
+    if (select.value) assigned.add(select.value);
+  });
+
+  // Para cada select, actualizar opciones
+  selects.forEach(select => {
+    const currentValue = select.value;
+    // Limpiar opciones excepto la vacía y la seleccionada
+    const options = select.querySelectorAll('option');
+    options.forEach(option => {
+      if (option.value === '' || option.value === currentValue) return;
+      if (assigned.has(option.value) && option.value !== currentValue) {
+        option.style.display = 'none';
+      } else {
+        option.style.display = '';
+      }
+    });
+  });
 }
 
 function updateMisasValidation() {
@@ -520,31 +635,6 @@ function saveMisasMonth() {
   const [year, month] = monthInput.split('-').map(Number);
   const days = getDaysInMonth(year, month);
   const key = `${year}-${String(month).padStart(2, '0')}`;
-
-  document.getElementById('misas-error').textContent = '';
-  let invalid = false;
-
-  for (let d = 1; d <= days; d += 1) {
-    const assigned = {};
-    centros.forEach(c => {
-      const select = document.querySelector(`select[data-dia="${d}"][data-centro="${c.id}"]`);
-      if (!select) return;
-      const sacerdoteId = select.value ? Number(select.value) : null;
-      if (!sacerdoteId) return;
-      assigned[sacerdoteId] = assigned[sacerdoteId] || 0;
-      assigned[sacerdoteId] += 1;
-    });
-
-    if (Object.values(assigned).some(count => count > 1)) {
-      invalid = true;
-      break;
-    }
-  }
-
-  if (invalid) {
-    document.getElementById('misas-error').textContent = 'Un mismo sacerdote no puede estar asignado en más de un centro el mismo día.';
-    return;
-  }
 
   if (!plan[key]) plan[key] = {};
 
