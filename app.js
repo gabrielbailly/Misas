@@ -6,6 +6,13 @@ const STORAGE = {
   currentUser: 'misas_current_user'
 };
 
+const dataStore = {
+  centros: [],
+  sacerdotes: [],
+  usuarios: [],
+  plan: {}
+};
+
 const homeCalendarState = {
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
@@ -38,39 +45,67 @@ const elements = {
 };
 
 function getData(key, fallback = []) {
+  return dataStore[key] || fallback;
+}
+
+function saveData(key, data) {
+  dataStore[key] = data;
+  if (window.db) {
+    const docRef = doc(window.db, 'data', key);
+    setDoc(docRef, { value: data }).catch(console.error);
+  } else {
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+}
+
+
+async function initData() {
+  const initialCentros = [
+    { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },
+    { id: 2, nombre: 'Centro Santa María', ubicacion: 'Plaza de la Paz 5', observaciones: 'Misa familiar', horaSemana: '20:00', horaFinSemana: '11:30' }
+  ];
+  const initialSacerdotes = [
+    { id: 1, nombre: 'Padre Pedro', telefono: '600123456' },
+    { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
+  ];
+  const initialUsuarios = [
+    { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin', tipo: 'administrador', centroId: null },
+    { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
+    { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
+  ];
+  const initialPlan = {};
+
+  if (window.db) {
+    // Cargar desde Firestore
+    const keys = ['centros', 'sacerdotes', 'usuarios', 'plan'];
+    for (const key of keys) {
+      const docRef = doc(window.db, 'data', key);
+      try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          dataStore[key] = docSnap.data().value;
+        } else {
+          dataStore[key] = eval(`initial${key.charAt(0).toUpperCase() + key.slice(1)}`);
+          await setDoc(docRef, { value: dataStore[key] });
+        }
+      } catch (error) {
+        console.error(`Error loading ${key}:`, error);
+        dataStore[key] = eval(`initial${key.charAt(0).toUpperCase() + key.slice(1)}`);
+      }
+    }
+  } else {
+    // Fallback a localStorage
+    dataStore.centros = getDataFromLocal(STORAGE.centros, initialCentros);
+    dataStore.sacerdotes = getDataFromLocal(STORAGE.sacerdotes, initialSacerdotes);
+    dataStore.usuarios = getDataFromLocal(STORAGE.usuarios, initialUsuarios);
+    dataStore.plan = getDataFromLocal(STORAGE.plan, initialPlan);
+  }
+}
+
+function getDataFromLocal(key, fallback) {
   const raw = localStorage.getItem(key);
   if (!raw) return fallback;
   try { return JSON.parse(raw) || fallback; } catch { return fallback; }
-}
-function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
-
-function initData() {
-  if (!localStorage.getItem(STORAGE.centros)) {
-    const initialCentros = [
-      { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },
-      { id: 2, nombre: 'Centro Santa María', ubicacion: 'Plaza de la Paz 5', observaciones: 'Misa familiar', horaSemana: '20:00', horaFinSemana: '11:30' }
-    ];
-    saveData(STORAGE.centros, initialCentros);
-  }
-  if (!localStorage.getItem(STORAGE.sacerdotes)) {
-    const initial = [
-      { id: 1, nombre: 'Padre Pedro', telefono: '600123456' },
-      { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
-    ];
-    saveData(STORAGE.sacerdotes, initial);
-  }
-  if (!localStorage.getItem(STORAGE.usuarios)) {
-    const users = [
-      { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin', tipo: 'administrador', centroId: null },
-      { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
-      { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
-    ];
-    saveData(STORAGE.usuarios, users);
-  }
-  if (!localStorage.getItem(STORAGE.plan)) {
-    const plan = {};
-    saveData(STORAGE.plan, plan);
-  }
 }
 
 function login(event) {
@@ -235,19 +270,31 @@ function renderHome() {
 
   elements.homeView.innerHTML = html;
 
-  document.getElementById('month-prev').addEventListener('click', () => changeHomeCalendarMonth(-1));
-  document.getElementById('month-next').addEventListener('click', () => changeHomeCalendarMonth(1));
-  document.querySelectorAll('.calendar-day:not(.empty)').forEach(dayEl => {
-    dayEl.addEventListener('click', () => {
-      const dayNumber = Number(dayEl.textContent.trim());
+  // Usar event delegation en lugar de listeners directos
+  elements.homeView.addEventListener('click', (e) => {
+    if (e.target.id === 'month-prev') {
+      e.preventDefault();
+      changeHomeCalendarMonth(-1);
+    }
+    if (e.target.id === 'month-next') {
+      e.preventDefault();
+      changeHomeCalendarMonth(1);
+    }
+    if (e.target.classList.contains('calendar-day') && !e.target.classList.contains('empty')) {
+      const dayNumber = Number(e.target.textContent.trim());
       selectHomeCalendarDay(homeCalendarState.year, homeCalendarState.month, dayNumber);
-    });
+    }
   });
 
-  if (user.tipo === 'centro') {
-    document.getElementById('print-center-month').addEventListener('click', () => printSchedule(user.centroId));
-  } else {
-    document.getElementById('print-all-month').addEventListener('click', () => printSchedule());
+  // Event listeners para botones de impresión
+  const printCenterBtn = document.getElementById('print-center-month');
+  const printAllBtn = document.getElementById('print-all-month');
+  
+  if (printCenterBtn && user.tipo === 'centro') {
+    printCenterBtn.addEventListener('click', () => printSchedule(user.centroId));
+  }
+  if (printAllBtn && user.tipo !== 'centro') {
+    printAllBtn.addEventListener('click', () => printSchedule());
   }
 }
 
@@ -762,8 +809,8 @@ function bindEvents() {
   });
 }
 
-function initApp() {
-  initData();
+async function initApp() {
+  await initData();
   bindEvents();
 
   const currentUser = getCurrentUser();
