@@ -1,3 +1,11 @@
+const STORAGE = {
+  centros: 'misas_centros',
+  sacerdotes: 'misas_sacerdotes',
+  usuarios: 'misas_usuarios',
+  plan: 'misas_plan',
+  currentUser: 'misas_current_user'
+};
+
 const dataStore = {
   centros: [],
   sacerdotes: [],
@@ -65,12 +73,14 @@ function saveData(key, data) {
 }
 
 async function initData() {
+  console.log('initData called, window.db:', window.db);
   if (!window.db) {
     console.error('Firebase no está inicializado');
     return;
   }
 
   try {
+    console.log('Starting to load data from Firebase...');
     // Datos iniciales
     const initialCentros = [
       { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },

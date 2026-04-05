@@ -97,16 +97,21 @@ const firebaseConfig = {
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
+    console.log('Firebase app initialized');
     window.db = getFirestore(app);
+    console.log('Firestore db assigned to window');
     window.doc = doc;
     window.getDoc = getDoc;
     window.setDoc = setDoc;
     window.collection = collection;
     window.getDocs = getDocs;
     const auth = getAuth(app);
+    console.log('Auth initialized');
 
     // Sign in anonymously
-    signInAnonymously(auth).catch((error) => {
+    signInAnonymously(auth).then(() => {
+      console.log('Signed in anonymously');
+    }).catch((error) => {
       console.error('Error signing in anonymously:', error);
     });
   </script>
