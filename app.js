@@ -1,9 +1,8 @@
-const STORAGE = {
-  centros: 'misas_centros',
-  sacerdotes: 'misas_sacerdotes',
-  usuarios: 'misas_usuarios',
-  plan: 'misas_plan',
-  currentUser: 'misas_current_user'
+const dataStore = {
+  centros: [],
+  sacerdotes: [],
+  usuarios: [],
+  plan: {}
 };
 
 const elements = {
@@ -32,38 +31,117 @@ const elements = {
 };
 
 function getData(key, fallback = []) {
-  const raw = localStorage.getItem(key);
-  if (!raw) return fallback;
-  try { return JSON.parse(raw) || fallback; } catch { return fallback; }
+  // Retorna del cache en memoria (dataStore)
+  // Los datos se cargan desde Firebase en initData()
+  return dataStore[key] || fallback;
 }
-function saveData(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
 
-function initData() {
-  if (!localStorage.getItem(STORAGE.centros)) {
+function saveData(key, data) {
+  // Actualizar cache en memoria
+  dataStore[key] = data;
+  
+  // Guardar en Firebase de forma asíncrona
+  if (window.db) {
+    if (key === 'plan') {
+      Object.keys(data).forEach(async (monthKey) => {
+        try {
+          const docRef = window.doc(window.db, 'plan', monthKey);
+          await window.setDoc(docRef, data[monthKey]);
+        } catch (error) {
+          console.error('Error guardando plan en Firebase:', error);
+        }
+      });
+    } else if (Array.isArray(data)) {
+      data.forEach(async (item) => {
+        try {
+          const docRef = window.doc(window.db, key, item.id.toString());
+          await window.setDoc(docRef, item);
+        } catch (error) {
+          console.error('Error guardando en Firebase:', error);
+        }
+      });
+    }
+  }
+}
+
+async function initData() {
+  if (!window.db) {
+    console.error('Firebase no está inicializado');
+    return;
+  }
+
+  try {
+    // Datos iniciales
     const initialCentros = [
       { id: 1, nombre: 'Centro San Juan', ubicacion: 'Calle Mayor 1', observaciones: 'Parroquia central', horaSemana: '19:00', horaFinSemana: '12:00' },
       { id: 2, nombre: 'Centro Santa María', ubicacion: 'Plaza de la Paz 5', observaciones: 'Misa familiar', horaSemana: '20:00', horaFinSemana: '11:30' }
     ];
-    saveData(STORAGE.centros, initialCentros);
-  }
-  if (!localStorage.getItem(STORAGE.sacerdotes)) {
-    const initial = [
+    const initialSacerdotes = [
       { id: 1, nombre: 'Padre Pedro', telefono: '600123456' },
       { id: 2, nombre: 'Padre Mateo', telefono: '600654321' }
     ];
-    saveData(STORAGE.sacerdotes, initial);
-  }
-  if (!localStorage.getItem(STORAGE.usuarios)) {
-    const users = [
-      { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin', tipo: 'administrador', centroId: null },
+    const initialUsuarios = [
+      { id: 1, nombre: 'Administrador', correo: 'admin@misas.local', contraseña: 'admin12', tipo: 'administrador', centroId: null },
       { id: 2, nombre: 'Usuario Centro 1', correo: 'centro1@misas.local', contraseña: 'centro1', tipo: 'centro', centroId: 1 },
       { id: 3, nombre: 'Sacerdote', correo: 'padre1@misas.local', contraseña: 'padre1', tipo: 'sacerdote', centroId: null }
     ];
-    saveData(STORAGE.usuarios, users);
-  }
-  if (!localStorage.getItem(STORAGE.plan)) {
-    const plan = {};
-    saveData(STORAGE.plan, plan);
+
+    // Cargar centros desde Firebase
+    const centrosSnap = await window.getDocs(window.collection(window.db, 'centros'));
+    if (centrosSnap.empty) {
+      console.log('Creando colección centros en Firebase...');
+      for (const centro of initialCentros) {
+        await window.setDoc(window.doc(window.db, 'centros', centro.id.toString()), centro);
+      }
+      dataStore.centros = initialCentros;
+    } else {
+      dataStore.centros = centrosSnap.docs.map(d => d.data());
+    }
+
+    // Cargar sacerdotes desde Firebase
+    const sacerdotesSnap = await window.getDocs(window.collection(window.db, 'sacerdotes'));
+    if (sacerdotesSnap.empty) {
+      console.log('Creando colección sacerdotes en Firebase...');
+      for (const sacerdote of initialSacerdotes) {
+        await window.setDoc(window.doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
+      }
+      dataStore.sacerdotes = initialSacerdotes;
+    } else {
+      dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data());
+    }
+
+    // Cargar usuarios desde Firebase
+    const usuariosSnap = await window.getDocs(window.collection(window.db, 'usuarios'));
+    if (usuariosSnap.empty) {
+      console.log('Creando colección usuarios en Firebase...');
+      for (const usuario of initialUsuarios) {
+        await window.setDoc(window.doc(window.db, 'usuarios', usuario.id.toString()), usuario);
+      }
+      dataStore.usuarios = initialUsuarios;
+    } else {
+      dataStore.usuarios = usuariosSnap.docs.map(d => d.data());
+    }
+
+    // Cargar plan desde Firebase
+    const planSnap = await window.getDocs(window.collection(window.db, 'plan'));
+    if (planSnap.empty) {
+      console.log('Colección plan lista (vacía)');
+      dataStore.plan = {};
+    } else {
+      dataStore.plan = {};
+      planSnap.forEach(d => {
+        dataStore.plan[d.id] = d.data();
+      });
+    }
+
+    console.log('✓ Datos cargados desde Firebase:', {
+      centros: dataStore.centros.length,
+      sacerdotes: dataStore.sacerdotes.length,
+      usuarios: dataStore.usuarios.length,
+      planKeys: Object.keys(dataStore.plan).length
+    });
+  } catch (error) {
+    console.error('Error cargando datos:', error);
   }
 }
 
@@ -586,8 +664,8 @@ function bindEvents() {
   });
 }
 
-function initApp() {
-  initData();
+async function initApp() {
+  await initData();
   bindEvents();
 
   const currentUser = getCurrentUser();
