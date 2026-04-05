@@ -72,7 +72,10 @@ function login(event) {
   const email = elements.loginEmail.value.trim();
   const password = elements.loginPassword.value.trim();
   const usuarios = getData(STORAGE.usuarios);
+  console.log('Usuarios cargados:', usuarios);
+  console.log('Intentando login con:', email, password);
   const user = usuarios.find((u) => u.correo.toLowerCase() === email.toLowerCase() && u.contraseña === password);
+  console.log('Usuario encontrado:', user);
 
   if (!user) {
     elements.loginError.textContent = 'Usuario o contraseña incorrectos';
