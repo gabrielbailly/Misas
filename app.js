@@ -50,7 +50,7 @@ function saveData(key, data) {
   
   // Guardar en Firebase de forma asíncrona
   if (window.db) {
-    if (key === 'plan') {
+    if (key === STORAGE.plan) {
       Object.keys(data).forEach(async (monthKey) => {
         try {
           const docRef = window.doc(window.db, 'plan', monthKey);
@@ -62,7 +62,7 @@ function saveData(key, data) {
     } else if (Array.isArray(data)) {
       data.forEach(async (item) => {
         try {
-          const docRef = window.doc(window.db, key, item.id.toString());
+          const docRef = window.doc(window.db, key.replace('misas_', ''), item.id.toString());
           await window.setDoc(docRef, item);
         } catch (error) {
           console.error('Error guardando en Firebase:', error);
@@ -103,9 +103,9 @@ async function initData() {
       for (const centro of initialCentros) {
         await window.setDoc(window.doc(window.db, 'centros', centro.id.toString()), centro);
       }
-      dataStore.centros = initialCentros;
+      dataStore[STORAGE.centros] = initialCentros;
     } else {
-      dataStore.centros = centrosSnap.docs.map(d => d.data());
+      dataStore[STORAGE.centros] = centrosSnap.docs.map(d => d.data());
     }
 
     // Cargar sacerdotes desde Firebase
@@ -115,9 +115,9 @@ async function initData() {
       for (const sacerdote of initialSacerdotes) {
         await window.setDoc(window.doc(window.db, 'sacerdotes', sacerdote.id.toString()), sacerdote);
       }
-      dataStore.sacerdotes = initialSacerdotes;
+      dataStore[STORAGE.sacerdotes] = initialSacerdotes;
     } else {
-      dataStore.sacerdotes = sacerdotesSnap.docs.map(d => d.data());
+      dataStore[STORAGE.sacerdotes] = sacerdotesSnap.docs.map(d => d.data());
     }
 
     // Cargar usuarios desde Firebase
@@ -127,28 +127,30 @@ async function initData() {
       for (const usuario of initialUsuarios) {
         await window.setDoc(window.doc(window.db, 'usuarios', usuario.id.toString()), usuario);
       }
-      dataStore.usuarios = initialUsuarios;
+      dataStore[STORAGE.usuarios] = initialUsuarios;
     } else {
-      dataStore.usuarios = usuariosSnap.docs.map(d => d.data());
+      console.log('Usuarios raw docs:', usuariosSnap.docs);
+      dataStore[STORAGE.usuarios] = usuariosSnap.docs.map(d => d.data());
+      console.log('Usuarios mapped:', dataStore[STORAGE.usuarios]);
     }
 
     // Cargar plan desde Firebase
     const planSnap = await window.getDocs(window.collection(window.db, 'plan'));
     if (planSnap.empty) {
       console.log('Colección plan lista (vacía)');
-      dataStore.plan = {};
+      dataStore[STORAGE.plan] = {};
     } else {
-      dataStore.plan = {};
+      dataStore[STORAGE.plan] = {};
       planSnap.forEach(d => {
-        dataStore.plan[d.id] = d.data();
+        dataStore[STORAGE.plan][d.id] = d.data();
       });
     }
 
     console.log('✓ Datos cargados desde Firebase:', {
-      centros: dataStore.centros.length,
-      sacerdotes: dataStore.sacerdotes.length,
-      usuarios: dataStore.usuarios.length,
-      planKeys: Object.keys(dataStore.plan).length
+      centros: dataStore[STORAGE.centros].length,
+      sacerdotes: dataStore[STORAGE.sacerdotes].length,
+      usuarios: dataStore[STORAGE.usuarios].length,
+      planKeys: Object.keys(dataStore[STORAGE.plan]).length
     });
   } catch (error) {
     console.error('Error cargando datos:', error);
@@ -161,6 +163,7 @@ function login(event) {
   const password = elements.loginPassword.value.trim();
   const usuarios = getData(STORAGE.usuarios);
   console.log('Usuarios cargados:', usuarios);
+  console.log('dataStore.usuarios en login:', dataStore.usuarios);
   console.log('Intentando login con:', email, password);
   const user = usuarios.find((u) => u.correo.toLowerCase() === email.toLowerCase() && u.contraseña === password);
   console.log('Usuario encontrado:', user);
