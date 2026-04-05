@@ -13,6 +13,12 @@ const dataStore = {
   plan: {}
 };
 
+const homeCalendarState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  selectedDate: new Date()
+};
+
 const elements = {
   loginScreen: document.getElementById('login-screen'),
   mainScreen: document.getElementById('main-screen'),
@@ -129,9 +135,7 @@ async function initData() {
       }
       dataStore[STORAGE.usuarios] = initialUsuarios;
     } else {
-      console.log('Usuarios raw docs:', usuariosSnap.docs);
       dataStore[STORAGE.usuarios] = usuariosSnap.docs.map(d => d.data());
-      console.log('Usuarios mapped:', dataStore[STORAGE.usuarios]);
     }
 
     // Cargar plan desde Firebase
@@ -162,11 +166,7 @@ function login(event) {
   const email = elements.loginEmail.value.trim();
   const password = elements.loginPassword.value.trim();
   const usuarios = getData(STORAGE.usuarios);
-  console.log('Usuarios cargados:', usuarios);
-  console.log('dataStore.usuarios en login:', dataStore.usuarios);
-  console.log('Intentando login con:', email, password);
   const user = usuarios.find((u) => u.correo.toLowerCase() === email.toLowerCase() && u.contraseña === password);
-  console.log('Usuario encontrado:', user);
 
   if (!user) {
     elements.loginError.textContent = 'Usuario o contraseña incorrectos';
@@ -200,6 +200,193 @@ function showMain(user) {
   }
 
   renderHome();
+}
+
+function renderHome() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const centros = getData(STORAGE.centros);
+  const plan = getData(STORAGE.plan);
+  const sacerdotes = getData(STORAGE.sacerdotes);
+
+  const visibleCenters = user.tipo === 'centro' ? centros.filter(c => c.id === user.centroId) : centros;
+  const currentDate = homeCalendarState.selectedDate;
+  const selectedKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+  const selectedDay = currentDate.getDate();
+
+  const todayMisas = visibleCenters.map(centro => {
+    const sacerdoteId = plan[selectedKey]?.[selectedDay]?.[centro.id] || null;
+    const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
+    return {
+      centro: centro.nombre,
+      sacerdote: sacerdote ? sacerdote.nombre : null,
+      hora: (currentDate.getDay() === 0 || currentDate.getDay() === 6) ? centro.horaFinSemana : centro.horaSemana
+    };
+  });
+
+  const weekDates = getWeekDates(currentDate);
+  const weekHtml = weekDates.map(d => {
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const key = `${d.getFullYear()}-${String(month).padStart(2, '0')}`;
+    const misas = visibleCenters.map(centro => {
+      const sacerdoteId = plan[key]?.[day]?.[centro.id] || null;
+      const sacerdote = sacerdotes.find(s => s.id === sacerdoteId);
+      return {
+        centro: centro.nombre,
+        sacerdote: sacerdote ? sacerdote.nombre : null
+      };
+    }).filter(item => item.sacerdote);
+
+    const content = misas.length
+      ? misas.map(item => `<li class="flex justify-between items-center py-1"><span>${item.centro}:</span> <strong class="text-blue-600">${item.sacerdote}</strong></li>`).join('')
+      : '<p class="text-gray-500 text-sm">No hay misas programadas.</p>';
+
+    return `
+      <article class="bg-gray-50 rounded-lg p-4">
+        <h3 class="font-medium text-gray-900 mb-2">${formatDay(d)}</h3>
+        <ul class="space-y-1">${content}</ul>
+      </article>
+    `;
+  }).join('');
+
+  const calendarHtml = renderCalendar(homeCalendarState.year, homeCalendarState.month, currentDate);
+
+  const selectedLabel = currentDate.toDateString() === new Date().toDateString()
+    ? 'Misas de hoy'
+    : `Misas de ${formatDay(currentDate)}`;
+
+  const todayContent = todayMisas.some(m => m.sacerdote)
+    ? `<ul class="space-y-2 mt-4">${todayMisas.map(m => `<li class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-md"><span>${m.centro} — ${m.hora}</span><strong class="text-blue-600">${m.sacerdote}</strong></li>`).join('')}</ul>`
+    : '<p class="text-gray-500 mt-4">No hay misas programadas para este día.</p>';
+
+  const printButtonHtml = user.tipo === 'centro'
+    ? '<button id="print-center-month" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">Imprimir misas del mes de mi centro</button>'
+    : '<button id="print-all-month" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">Imprimir misas del mes de todos los centros</button>';
+
+  const html = `
+    <section class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm text-gray-500 uppercase tracking-wide">${selectedLabel}</p>
+          <h2 class="text-2xl font-bold text-gray-900 mt-1">${formatDay(currentDate)}</h2>
+          ${todayContent}
+        </div>
+        <div class="flex gap-2">
+          ${printButtonHtml}
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">${new Date(homeCalendarState.year, homeCalendarState.month).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</h3>
+          <div class="flex gap-1">
+            <button id="month-prev" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Mes anterior">&#8249;</button>
+            <button id="month-next" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Mes siguiente">&#8250;</button>
+          </div>
+        </div>
+        ${calendarHtml}
+      </div>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Misas semana</h3>
+          <span class="text-sm text-gray-500">${formatDay(weekDates[0])} al ${formatDay(weekDates[6])}</span>
+        </div>
+        <div class="space-y-4">
+          ${weekHtml}
+        </div>
+      </div>
+    </section>
+  `;
+
+  elements.homeView.innerHTML = html;
+
+  // Usar event delegation en lugar de listeners directos
+  elements.homeView.addEventListener('click', (e) => {
+    if (e.target.id === 'month-prev') {
+      e.preventDefault();
+      changeHomeCalendarMonth(-1);
+    }
+    if (e.target.id === 'month-next') {
+      e.preventDefault();
+      changeHomeCalendarMonth(1);
+    }
+    if (e.target.classList.contains('calendar-day') && !e.target.classList.contains('empty')) {
+      const dayNumber = Number(e.target.textContent.trim());
+      selectHomeCalendarDay(homeCalendarState.year, homeCalendarState.month, dayNumber);
+    }
+  });
+}
+
+function renderCalendar(year, month, selectedDate) {
+  const daysInMonth = getDaysInMonth(year, month + 1);
+  const firstDay = new Date(year, month, 1).getDay();
+  const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  const offset = firstDay === 0 ? 6 : firstDay - 1;
+  let daysHtml = '';
+
+  for (let i = 0; i < offset; i += 1) {
+    daysHtml += '<div class="calendar-day empty h-10 w-10"></div>';
+  }
+
+  const today = new Date();
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const isSelected = selectedDate && day === selectedDate.getDate() && month === selectedDate.getMonth() && year === selectedDate.getFullYear();
+    const baseClasses = 'calendar-day h-10 w-10 flex items-center justify-center rounded-full cursor-pointer hover:bg-blue-100 transition-colors';
+    const todayClasses = isToday ? ' bg-blue-500 text-white' : '';
+    const selectedClasses = isSelected ? ' bg-blue-600 text-white' : '';
+    daysHtml += `<div class="${baseClasses}${todayClasses}${selectedClasses}">${day}</div>`;
+  }
+
+  return `
+    <div class="grid grid-cols-7 gap-1">
+      ${dayNames.map(name => `<div class="text-center font-semibold text-gray-600 py-2">${name}</div>`).join('')}
+      ${daysHtml}
+    </div>
+  `;
+}
+
+function changeHomeCalendarMonth(delta) {
+  const currentDay = homeCalendarState.selectedDate.getDate();
+  const newDate = new Date(homeCalendarState.year, homeCalendarState.month + delta, 1);
+  const newYear = newDate.getFullYear();
+  const newMonth = newDate.getMonth();
+  const daysInNewMonth = new Date(newYear, newMonth + 1, 0).getDate();
+  const targetDay = Math.min(currentDay, daysInNewMonth);
+  
+  homeCalendarState.year = newYear;
+  homeCalendarState.month = newMonth;
+  homeCalendarState.selectedDate = new Date(newYear, newMonth, targetDay);
+  renderHome();
+}
+
+function selectHomeCalendarDay(year, month, day) {
+  homeCalendarState.selectedDate = new Date(year, month, day);
+  renderHome();
+}
+
+function getWeekDates(date) {
+  const result = [];
+  const start = new Date(date);
+  start.setDate(date.getDate() - date.getDay() + 1); // Lunes de la semana
+
+  for (let i = 0; i < 7; i += 1) {
+    result.push(new Date(start));
+    start.setDate(start.getDate() + 1);
+  }
+  return result;
+}
+
+function formatDay(date) {
+  return date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
 }
 
 function getCurrentUser() {
