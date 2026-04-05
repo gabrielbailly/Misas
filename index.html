@@ -111,6 +111,7 @@ const firebaseConfig = {
     // Sign in anonymously
     signInAnonymously(auth).then(() => {
       console.log('Signed in anonymously');
+      window.firebaseReady = true;
     }).catch((error) => {
       console.error('Error signing in anonymously:', error);
     });

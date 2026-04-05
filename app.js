@@ -675,6 +675,11 @@ function bindEvents() {
 }
 
 async function initApp() {
+  // Esperar a que Firebase esté listo
+  while (!window.firebaseReady) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  console.log('Firebase ready, proceeding with initData');
   await initData();
   bindEvents();
 
